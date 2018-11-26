@@ -6,10 +6,12 @@ Created on Sun Nov 25 17:11:09 2018
 @author: yuanjihuang
 """
 import time
+import csv
 from guizero import App,Text,PushButton,Picture
 import Adafruit_ADS1x15
 import Adafruit_ADXL345
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 class Sensor:
     def __init__(self,max_len = 20):
@@ -40,6 +42,12 @@ class Sensor:
         #print(self.muscle,self.acc)
         self.check_len()
         return (self.muscle, self.acc)
+    
+    def save_csv(self):
+        with open('data.csv','a') as output:
+            writer = csv.writer(output, delimiter = ',', lineterminator = '\n')
+            writer.writerow([self.muscle,self.acc[0],self.acc[1],self.acc[2]])
+            
     def create_image(self):
         plt.figure()
         plt.plot(self.muscle)
@@ -53,8 +61,7 @@ def repeater(sensor):
     if stop == 1:
         #print('stop is 1')
         sensor.read()
-        fig_name = sensor.create_image()
-        picture.value = fig_name
+        sensor.save_csv()
         picture.after(200,repeater,args=[sensor])
         #print('next round')
     else:
