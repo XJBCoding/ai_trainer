@@ -47,9 +47,9 @@ class Sensor:
         with open('data.csv','a') as output:
             writer = csv.writer(output, delimiter = ',', lineterminator = '\n')
             for i in range(len(self.muscle)):  
-                writer.writerow([self.muscle[i],self.acc[i][0],self.acc[i][1],self.acc[i][2]])
+                writer.writerow([self.time[i],self.muscle[i],self.acc[i][0],self.acc[i][1],self.acc[i][2]])
             
-    def create_image(self):
+    '''def create_image(self):
         plt.figure()
         plt.plot(self.muscle)
         plt.savefig('tem.png')
@@ -57,18 +57,22 @@ class Sensor:
         #print('image created!')
         #print(self.muscle)
         return 'tem.png'
+        '''
     
-def repeater(sensor):
+def repeater(sensor,count):
     if stop == 1:
         #print('stop is 1')
         sensor.read()
-        picture.after(200,repeater,args=[sensor])
+        if count == 5:
+            sensor.save_csv()
+            count = 0
+        picture.after(200,repeater,args=[sensor,count+1])
         #print('next round')
     else:
-        sensor.save_csv()
+        
         print('end')
 
-def data_repeater(sensor):
+'''def data_repeater(sensor):
     global stop
     if stop == 1:
         #print('stop is 1')
@@ -77,15 +81,16 @@ def data_repeater(sensor):
         data.after(1000,data_repeater,args=[sensor])
         #print('next round')
     else:
-        print('data_end')
+        print('data_end')'''
         
         
 def calibrate():
     global stop
     sensor = Sensor(100)
     stop = 1
+    ani = animation.FuncAnimation(fig,animate,interval = 1000)
     #data.after(500,data_repeater,args=[sensor])
-    picture.after(50,repeater,args=[sensor])
+    #picture.after(50,repeater,args=[sensor,0])
     
 def train():
     pass
@@ -93,7 +98,25 @@ def stop_func():
     global stop
     stop = 0
     
+def animate(i):
+    ftemp = 'tem.csv'
+    fh = open(ftemp)
+    x = []
+    y = []
+    for line in fh:
+        pieces = line.split(',')
+        time = pieces[0]
+        muscle = pieces[1]
+        x.append(time)
+        y.append(muscle)
+        ax1 = fig.add_subplot(1,1,1,axisbg='white')
+        ax1.clear()
+        ax1.plot(x,y)
+        
+        
+    
 if __name__ == "__main__":
+    fig = plt.figure()
     app = App(title="AI Trainer")
     welcome_message = Text(app, text="Please choose mode")
     calibrate = PushButton(app, command=calibrate, text="Calibrate")
