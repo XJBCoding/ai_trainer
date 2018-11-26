@@ -19,7 +19,11 @@ class Sensor:
         self.cur_time = 0
         self.time = [0]
         self.muscle = []
-        self.acc = []   
+        self.acc = [] 
+        self.acc_max = [0,0,0]
+        self.muscle_max = 0
+        self.muscle_min = 0
+        
         self.max_len = max_len
     def check_len(self):
         if len(self.time) > self.max_len:
@@ -48,6 +52,12 @@ class Sensor:
             writer = csv.writer(output, delimiter = ',', lineterminator = '\n')
             for i in range(len(self.muscle)):  
                 writer.writerow([self.time[i],self.muscle[i],self.acc[i][0],self.acc[i][1],self.acc[i][2]])
+    def create_standard_movement(self):
+        self.muscle_max = max(self.muscle)
+        self.muscle_min = min(self.muscle)
+        for i in range(3):
+            self.acc_max[i] = max(self.acc[i])
+        print(self.muscle_max,self.muscle_min)
             
     def create_image(self):
         plt.figure()
@@ -55,7 +65,6 @@ class Sensor:
         plt.plot(self.muscle)
         #plt.subplot(122)
         #plt.plot(self.acc[0])
-        
         plt.savefig('tem.png')
         #plt.close()
         #print('image created!')
@@ -75,6 +84,7 @@ def repeater(sensor,count):
     else:
         name = sensor.create_image()
         picture.value = name 
+        sensor.create_standard_movement()
         print('end')
 
 '''def data_repeater(sensor):
@@ -95,7 +105,6 @@ def calibrate():
     fig = plt.figure()
     sensor = Sensor(100)
     stop = 1
-    
     #data.after(500,data_repeater,args=[sensor])
     picture.after(100,repeater,args=[sensor,0])
     
