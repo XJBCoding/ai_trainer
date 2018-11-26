@@ -46,7 +46,8 @@ class Sensor:
     def save_csv(self):
         with open('data.csv','a') as output:
             writer = csv.writer(output, delimiter = ',', lineterminator = '\n')
-            writer.writerow([self.muscle,self.acc[0],self.acc[1],self.acc[2]])
+            for i in range(len(self.muscle)):  
+                writer.writerow([self.muscle[i],self.acc[i][0],self.acc[i][1],self.acc[i][2]])
             
     def create_image(self):
         plt.figure()
@@ -61,10 +62,10 @@ def repeater(sensor):
     if stop == 1:
         #print('stop is 1')
         sensor.read()
-        sensor.save_csv()
         picture.after(200,repeater,args=[sensor])
         #print('next round')
     else:
+        sensor.save_csv()
         print('end')
 
 def data_repeater(sensor):
