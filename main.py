@@ -11,7 +11,6 @@ from guizero import App,Text,PushButton,Picture
 import Adafruit_ADS1x15
 import Adafruit_ADXL345
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
 class Sensor:
     def __init__(self,max_len = 20):
@@ -44,20 +43,25 @@ class Sensor:
         return (self.muscle, self.acc)
     
     def save_csv(self):
-        with open('data.csv','a') as output:
+        print(self.cur_time)
+        with open('data.csv','w') as output:
             writer = csv.writer(output, delimiter = ',', lineterminator = '\n')
             for i in range(len(self.muscle)):  
                 writer.writerow([self.time[i],self.muscle[i],self.acc[i][0],self.acc[i][1],self.acc[i][2]])
             
-    '''def create_image(self):
+    def create_image(self):
         plt.figure()
+        plt.subplot(111)
         plt.plot(self.muscle)
+        #plt.subplot(122)
+        #plt.plot(self.acc[0])
+        
         plt.savefig('tem.png')
-        plt.close()
+        #plt.close()
         #print('image created!')
         #print(self.muscle)
         return 'tem.png'
-        '''
+        
     
 def repeater(sensor,count):
     if stop == 1:
@@ -69,7 +73,8 @@ def repeater(sensor,count):
         picture.after(200,repeater,args=[sensor,count+1])
         #print('next round')
     else:
-        
+        name = sensor.create_image()
+        picture.value = name 
         print('end')
 
 '''def data_repeater(sensor):
@@ -85,12 +90,14 @@ def repeater(sensor,count):
         
         
 def calibrate():
-    global stop
+    global stop,fig
+    picture.value = 'white.png'
+    fig = plt.figure()
     sensor = Sensor(100)
     stop = 1
-    ani = animation.FuncAnimation(fig,animate,interval = 1000)
+    
     #data.after(500,data_repeater,args=[sensor])
-    #picture.after(50,repeater,args=[sensor,0])
+    picture.after(100,repeater,args=[sensor,0])
     
 def train():
     pass
@@ -99,7 +106,7 @@ def stop_func():
     stop = 0
     
 def animate(i):
-    ftemp = 'tem.csv'
+    ftemp = 'data.csv'
     fh = open(ftemp)
     x = []
     y = []
@@ -109,14 +116,13 @@ def animate(i):
         muscle = pieces[1]
         x.append(time)
         y.append(muscle)
+        #print(x,y)
         ax1 = fig.add_subplot(1,1,1,axisbg='white')
         ax1.clear()
         ax1.plot(x,y)
         
-        
     
 if __name__ == "__main__":
-    fig = plt.figure()
     app = App(title="AI Trainer")
     welcome_message = Text(app, text="Please choose mode")
     calibrate = PushButton(app, command=calibrate, text="Calibrate")
