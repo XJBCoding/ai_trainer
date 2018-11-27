@@ -69,10 +69,10 @@ def repeater(sensor,count):
     if stop == 1:
         #print('stop is 1')
         sensor.read()
-        if count == 5:
+        if count == 20:
             sensor.save_csv()
             count = 0
-        picture.after(200,repeater,args=[sensor,count+1])
+        picture.after(50,repeater,args=[sensor,count+1])
         #print('next round')
     else:
         name = sensor.create_image()
@@ -81,7 +81,8 @@ def repeater(sensor,count):
 
 '''def data_repeater(sensor):
     global stop
-    if stop == 1:
+    if stop == 1:+
+    -
         #print('stop is 1')
         muscle,acc = sensor.read()
         data.value = str(muscle)
@@ -95,11 +96,11 @@ def calibrate():
     global stop,fig
     picture.value = 'white.png'
     fig = plt.figure()
-    sensor = Sensor(100)
+    sensor = Sensor(300)
     stop = 1
     
     #data.after(500,data_repeater,args=[sensor])
-    picture.after(100,repeater,args=[sensor,0])
+    picture.after(50,repeater,args=[sensor,0])
     
 def train():
     pass
