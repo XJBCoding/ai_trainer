@@ -37,7 +37,6 @@ class Sensor:
         self.time.append(self.cur_time)
         #add muscle
         a = self.adc.read_adc(0, gain=(2/3))
-        print(a)
         self.muscle.append(a)
         #add acc
         x,y,z = self.acel.read()
@@ -79,19 +78,49 @@ def calibrate_result():
     y_min = np.mean(sort_f3[:90])
     y_max = np.mean(sort_f3[-90:])
     muscle_max = np.mean(sort_f2[-100:])
-    plt.hlines(muscle_max, 0, len(list1), colors = "red", linestyles = "dashed")
+    
+    if muscle_max > 16000:
+        muscle_max = 16000
+    plt.hlines(muscle_max, list1[0], list1[-1], colors = "red", linestyles = "dashed")
     plt.plot(list1,f2)
+    a = muscle_max / (y_max-y_min)
+    plt.plot(list1,f3*a)
     plt.savefig('tem.png')
-    print(y_min,y_max,movement_count)
+    print(y_min,y_max,muscle_max)
+    plt.clf()
     return 'tem.png'
-    
-    
-    
+
+def train_result():
+    ftemp = 'train_data.csv'
+    fh = open(ftemp)
+    list1 = []
+    list2 = []
+    list3 = []    
+    for line in fh:
+        pieces = line.split(',')
+        time = pieces[0]
+        muscle = pieces[1]
+        axis_y = pieces[3]
+        list1.append(int(time))
+        list2.append(int(muscle))
+        list3.append(int(axis_y))
+    b,a = signal.butter(10,0.3,'low')
+    f2 = signal.lfilter(b,a,list2)
+    f3 = signal.lfilter(b,a,list3)
+    plt.hlines(muscle_max, list1[0], list1[-1], colors = "red", linestyles = "dashed")
+    plt.plot(list1,f2)
+    a = muscle_max / (y_max-y_min)
+    plt.plot(list1,f3*a)
+    plt.savefig('train_tem.png')
+    plt.clf()
+    return 'train_tem.png'
+
 def repeater(sensor,count):
     if stop == 1:
         #print('stop is 1')
         sensor.read()
         if count == 20:
+            print(sensor.muscle[-1],sensor.acc[-1][1])
             sensor.save_csv('cali_data.csv')
             count = 0
         picture.after(50,repeater,args=[sensor,count+1])
@@ -134,6 +163,7 @@ def train_repeater(sensor,count,state,direction):
             elif state == 1:
                 if sensor.muscle[-1] > muscle_max:
                     movement_count += 1 # one movement finish
+                    data.value = 'movement complete! count: '+str(movement_count)
                     direction = -1
         elif direction == -1:
             if state == 1:
@@ -145,24 +175,25 @@ def train_repeater(sensor,count,state,direction):
                     direction = 1
 
         if count == 20:
-            data.value = 'state:'+str(state)+' direction:'+str(direction) 
+            print(sensor.muscle[-1],sensor.acc[-1][1],state,direction)
+            data.value = 'count: '+str(movement_count)
             sensor.save_csv('train_data.csv')
             count = 0
         
-        picture.after(50,repeater,args=[sensor,count+1,state,direction])
+        picture.after(50,train_repeater,args=[sensor,count+1,state,direction])
         #print('next round')
     else:
-        data.value = 'generating result...'
-        name = calibrate_result()
-        data.value = 'Ready for training! Start from bottom'
+        name = train_result()
         picture.value = name 
-        print('end')
+        print('training_end')
         
         
 def train():
     global stop,fig
-    sensor = Sensor(300)
-    data.after(50,train_repeater,args=[sensor,0,0,1,-1])
+    stop = 1
+    picture.value = 'white.png'
+    sensor = Sensor(5000)
+    data.after(50,train_repeater,args=[sensor,0,-1,1])
     
     
     
@@ -185,7 +216,7 @@ if __name__ == "__main__":
     movement_count = 0
     muscle_max = 0
     data = Text(app, text = "")
-    picture = Picture(app, image="white.png",width=300,height=250)
+    picture = Picture(app, image="white.png",width=500,height=250)
     app.display()
     
 
