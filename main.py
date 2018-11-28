@@ -15,7 +15,7 @@ import Adafruit_ADS1x15
 import Adafruit_ADXL345
 import matplotlib.pyplot as plt
 import pymongo
-
+import datetime
 class Sensor:
     def __init__(self,max_len = 20):
         self.adc = Adafruit_ADS1x15.ADS1115(address = 0x48)
@@ -242,7 +242,17 @@ def getTodayTraining(id):
         temp_plan.append(movement)
     return temp_plan
 
-
+def uploadTrainingSummary(history):
+    global mydb
+    traininghistory = mydb["TrainingHistory"]
+    traininghistory.insert_one(history)
+def finish():
+    actual_cal = (movement_count/target_count) * calorie
+    history = {'userid':'kunjian','date':str(datetime.datetime.now())[0:10],
+               'movement':[movement_name],'target':[target_count],'count':[movement_count],
+               'qualifiedrate':[100],'target_cal':calorie,'actual_cal':actual_cal}
+    uploadTrainingSummary(history)
+    
 if __name__ == "__main__":
     client = pymongo.MongoClient("mongodb+srv://kunjian:iotproject@cluster0-ttnra.mongodb.net/test?retryWrites=true")
     mydb = client["IoTProject"]
@@ -250,18 +260,19 @@ if __name__ == "__main__":
     movement_name = plan[0]['name']
     target_count = plan[0]['unit']
     calorie = plan[0]['calorie']
-    app = App(title="AI Trainer")
-    welcome_message = Text(app, text='Current movement:'+movement_name)
-    calibrate = PushButton(app, command=calibrate, text="Calibrate")
-    train = PushButton(app, command=train, text="Train")
-    stop_btn = PushButton(app, command=stop_func, text="Stop")
+    app = App(title="AI Trainer",layout="grid",bg=(255,204,204))
+    welcome_message = Text(app, text='Current movement:'+movement_name, grid=[0,0,6,1],size=20)
+    calibrate = PushButton(app, command=calibrate, text="Calibrate",width = 12, grid=[1,1])
+    train = PushButton(app, command=train, text="Train", grid=[2,1])
+    stop_btn = PushButton(app, command=stop_func, text="Stop", grid=[4,1])
+    finish_btn = PushButton(app, command=finish , text="Finish",width = 12, grid=[5,1])
     stop = 0
     y_min = 0
     y_max = 0
     movement_count = 0
     muscle_max = 0
-    data = Text(app, text = "")
-    picture = Picture(app, image="white.png",width=500,height=250)
+    data = Text(app, text = "", grid=[0,2,6,1],size=20)
+    picture = Picture(app, image="white.png",width=500,height=250, grid=[0,3,6,1])
     app.display()
     
 
