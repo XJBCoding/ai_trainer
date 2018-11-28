@@ -14,6 +14,7 @@ from guizero import App,Text,PushButton,Picture
 import Adafruit_ADS1x15
 import Adafruit_ADXL345
 import matplotlib.pyplot as plt
+import pymongo
 
 class Sensor:
     def __init__(self,max_len = 20):
@@ -163,7 +164,7 @@ def train_repeater(sensor,count,state,direction):
             elif state == 1:
                 if sensor.muscle[-1] > muscle_max:
                     movement_count += 1 # one movement finish
-                    data.value = 'movement complete! count: '+str(movement_count)
+                    data.value = 'movement complete! count: '+str(movement_count)+'/'+str(target_count)
                     direction = -1
         elif direction == -1:
             if state == 1:
@@ -176,7 +177,7 @@ def train_repeater(sensor,count,state,direction):
 
         if count == 20:
             print(sensor.muscle[-1],sensor.acc[-1][1],state,direction)
-            data.value = 'count: '+str(movement_count)
+            data.value = 'count: '+str(movement_count)+'/'+str(target_count)
             sensor.save_csv('train_data.csv')
             count = 0
         
@@ -201,15 +202,59 @@ def stop_func():
     global stop
     stop = 0
     
-    
-    
+def generatePlan(id):
+    global mydb
+    movement_num = 1
+    profile = mydb['Profile']
+    movements = mydb['Movements']
+    trainingplan = mydb["TrainingPlan"]
+    target = profile.find_one({"userid": id})["target"]
+    muscles = ["chest", "back", "biceps", "triceps", "shoulder", "quadricep", "hamstring"]
+    day = 0
+    for muscle in muscles:
+        day += 1
+        muscle_move = list()
+        for movement in movements.find({'type': target, 'muscle': muscle}):
+            muscle_move.append(movement["name"])
+        selection = random.sample(range(len(muscle_move)), movement_num)
+        for i in selection:
+            mov_name = muscle_move[i]
+            mov_unit = movements.find_one({'name': mov_name})["unit"]
+            mov_calorie = movements.find_one({'name': mov_name})["calorie"]
+            trainingplan.insert_one({'userid': id, 'day': day, 'name': mov_name, 'type': target, 'muscle': muscle,
+                                     'unit': mov_unit, 'calorie': mov_calorie})
+
+# The return object is a list of dictionaries, dictionaries' structure is the same as that in mongoDB
+def getTodayTraining(id):
+    global mydb
+    day = 0
+    trainingplan = mydb["TrainingPlan"]
+
+    if trainingplan.find_one({'userid': id}) is None:
+        generatePlan(id)
+
+    for plan in trainingplan.find({'userid': id}):
+        if plan['day'] > day:
+            day = plan['day']
+
+    temp_plan = list()
+    for movement in trainingplan.find({'userid': id, 'day':day}):
+        temp_plan.append(movement)
+    return temp_plan
+
+
 if __name__ == "__main__":
-    
+    client = pymongo.MongoClient("mongodb+srv://kunjian:iotproject@cluster0-ttnra.mongodb.net/test?retryWrites=true")
+    mydb = client["IoTProject"]
+    plan = getTodayTraining('kunjian')
+    movement_name = plan[0]['name']
+    target_count = plan[0]['unit']
+    calorie = plan[0]['calorie']
     app = App(title="AI Trainer")
-    welcome_message = Text(app, text="Please choose mode")
+    welcome_message = Text(app, text='Current movement:'+movement_name)
     calibrate = PushButton(app, command=calibrate, text="Calibrate")
     train = PushButton(app, command=train, text="Train")
-    stop_btn = PushButton(app, command=stop_func, text="stop")
+    stop_btn = PushButton(app, command=stop_func, text="Stop")
     stop = 0
     y_min = 0
     y_max = 0
