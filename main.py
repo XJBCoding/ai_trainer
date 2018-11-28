@@ -5,6 +5,9 @@ Created on Sun Nov 25 17:11:09 2018
 
 @author: yuanjihuang
 """
+
+from scipy import signal
+import numpy as np
 import time
 import csv
 from guizero import App,Text,PushButton,Picture
@@ -50,20 +53,38 @@ class Sensor:
             writer = csv.writer(output, delimiter = ',', lineterminator = '\n')
             for i in range(len(self.muscle)):  
                 writer.writerow([self.time[i],self.muscle[i],self.acc[i][0],self.acc[i][1],self.acc[i][2]])
-            
-    def create_image(self):
-        plt.figure()
-        plt.subplot(111)
-        plt.plot(self.muscle)
-        #plt.subplot(122)
-        #plt.plot(self.acc[0])
         
-        plt.savefig('tem.png')
-        #plt.close()
-        #print('image created!')
-        #print(self.muscle)
-        return 'tem.png'
         
+        
+def calibrate_result():
+    global y_min,y_max,muscle_max
+    ftemp = 'data.csv'
+    fh = open(ftemp)
+    list1 = []
+    list2 = []
+    list3 = []
+    for line in fh:
+        pieces = line.split(',')
+        time = pieces[0]
+        muscle = pieces[1]
+        axis_y = pieces[3]
+        list1.append(int(time))
+        list2.append(int(muscle))
+        list3.append(int(axis_y))
+    b,a = signal.butter(10,0.2,'low')
+    f2 = signal.lfilter(b,a,list2)
+    f3 = signal.lfilter(b,a,list3)
+    sort_f2 = sorted(f2)
+    sort_f3 = sorted(f3)
+    y_min = np.mean(sort_f3[:90])
+    y_max = np.mean(sort_f3[-90:])
+    muscle_max = np.mean(sort_f2[-100:])
+    plt.hlines(muscle_max, 0, len(list1), colors = "c", linestyles = "dashed")
+    plt.plot(list1,f2)
+    plt.savefig('tem.png')
+    return 'tem.png'
+    
+    
     
 def repeater(sensor,count):
     if stop == 1:
@@ -75,27 +96,18 @@ def repeater(sensor,count):
         picture.after(50,repeater,args=[sensor,count+1])
         #print('next round')
     else:
-        name = sensor.create_image()
+        data.value = 'generating result...'
+        name = calibrate_result()
+        data.value = 'Ready for training!'
         picture.value = name 
         print('end')
-
-'''def data_repeater(sensor):
-    global stop
-    if stop == 1:+
-    -
-        #print('stop is 1')
-        muscle,acc = sensor.read()
-        data.value = str(muscle)
-        data.after(1000,data_repeater,args=[sensor])
-        #print('next round')
-    else:
-        print('data_end')'''
         
         
 def calibrate():
     global stop,fig
     picture.value = 'white.png'
     fig = plt.figure()
+    data.value = 'start calibration!'
     sensor = Sensor(300)
     stop = 1
     
@@ -108,22 +120,7 @@ def stop_func():
     global stop
     stop = 0
     
-def animate(i):
-    ftemp = 'data.csv'
-    fh = open(ftemp)
-    x = []
-    y = []
-    for line in fh:
-        pieces = line.split(',')
-        time = pieces[0]
-        muscle = pieces[1]
-        x.append(time)
-        y.append(muscle)
-        #print(x,y)
-        ax1 = fig.add_subplot(1,1,1,axisbg='white')
-        ax1.clear()
-        ax1.plot(x,y)
-        
+    
     
 if __name__ == "__main__":
     app = App(title="AI Trainer")
@@ -132,7 +129,7 @@ if __name__ == "__main__":
     train = PushButton(app, command=train, text="Train")
     stop_btn = PushButton(app, command=stop_func, text="stop")
     stop = 0
-    data = Text(app, text = "123")
+    data = Text(app, text = "")
     picture = Picture(app, image="white.png",width=300,height=250)
     app.display()
     
