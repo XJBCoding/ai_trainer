@@ -252,6 +252,10 @@ def finish():
                'movement':[movement_name],'target':[target_count],'count':[movement_count],
                'qualifiedrate':[100],'target_cal':calorie,'actual_cal':actual_cal}
     uploadTrainingSummary(history)
+    data.value = 'upload finished!'
+    time.sleep(1)
+    data.value = ''
+    movement_count = 0
     
 if __name__ == "__main__":
     client = pymongo.MongoClient("mongodb+srv://kunjian:iotproject@cluster0-ttnra.mongodb.net/test?retryWrites=true")
