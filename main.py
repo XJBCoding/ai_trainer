@@ -47,9 +47,9 @@ class Sensor:
         self.check_len()
         return (self.muscle, self.acc)
     
-    def save_csv(self):
-        print(self.cur_time)
-        with open('data.csv','w') as output:
+    def save_csv(self,name):
+        #print(self.cur_time)
+        with open(name,'w') as output:
             writer = csv.writer(output, delimiter = ',', lineterminator = '\n')
             for i in range(len(self.muscle)):  
                 writer.writerow([self.time[i],self.muscle[i],self.acc[i][0],self.acc[i][1],self.acc[i][2]])
@@ -58,7 +58,7 @@ class Sensor:
         
 def calibrate_result():
     global y_min,y_max,muscle_max
-    ftemp = 'data.csv'
+    ftemp = 'cali_data.csv'
     fh = open(ftemp)
     list1 = []
     list2 = []
@@ -79,9 +79,10 @@ def calibrate_result():
     y_min = np.mean(sort_f3[:90])
     y_max = np.mean(sort_f3[-90:])
     muscle_max = np.mean(sort_f2[-100:])
-    plt.hlines(muscle_max, 0, len(list1), colors = "c", linestyles = "dashed")
+    plt.hlines(muscle_max, 0, len(list1), colors = "red", linestyles = "dashed")
     plt.plot(list1,f2)
     plt.savefig('tem.png')
+    print(y_min,y_max,movement_count)
     return 'tem.png'
     
     
@@ -91,7 +92,7 @@ def repeater(sensor,count):
         #print('stop is 1')
         sensor.read()
         if count == 20:
-            sensor.save_csv()
+            sensor.save_csv('cali_data.csv')
             count = 0
         picture.after(50,repeater,args=[sensor,count+1])
         #print('next round')
@@ -113,9 +114,58 @@ def calibrate():
     
     #data.after(500,data_repeater,args=[sensor])
     picture.after(50,repeater,args=[sensor,0])
+ 
     
+    
+def train_repeater(sensor,count,state,direction):
+    
+    # state: 0 mid, 1 up, -1 down
+    # direction: 1 up, -1 down
+    global y_min,y_max,muscle_max,movement_count
+    if stop == 1:
+        sensor.read()
+        if direction == 1: # arm is going up
+            if state == -1: # arm was in the bottom
+                if sensor.acc[-1][1] > y_min: # arm in middle now
+                    state = 0
+            elif state == 0: # arm was in the middle
+                if sensor.acc[-1][1] > y_max: #arm in top now
+                    state = 1
+            elif state == 1:
+                if sensor.muscle[-1] > muscle_max:
+                    movement_count += 1 # one movement finish
+                    direction = -1
+        elif direction == -1:
+            if state == 1:
+                if sensor.acc[-1][1] < y_max:
+                    state = 0
+            elif state == 0: # arm was in the middle
+                if sensor.acc[-1][1] < y_min: #arm in top now
+                    state = -1
+                    direction = 1
+
+        if count == 20:
+            data.value = 'state:'+str(state)+' direction:'+str(direction) 
+            sensor.save_csv('train_data.csv')
+            count = 0
+        
+        picture.after(50,repeater,args=[sensor,count+1,state,direction])
+        #print('next round')
+    else:
+        data.value = 'generating result...'
+        name = calibrate_result()
+        data.value = 'Ready for training! Start from bottom'
+        picture.value = name 
+        print('end')
+        
+        
 def train():
-    pass
+    global stop,fig
+    sensor = Sensor(300)
+    data.after(50,train_repeater,args=[sensor,0,0,1,-1])
+    
+    
+    
 def stop_func():
     global stop
     stop = 0
@@ -123,12 +173,17 @@ def stop_func():
     
     
 if __name__ == "__main__":
+    
     app = App(title="AI Trainer")
     welcome_message = Text(app, text="Please choose mode")
     calibrate = PushButton(app, command=calibrate, text="Calibrate")
     train = PushButton(app, command=train, text="Train")
     stop_btn = PushButton(app, command=stop_func, text="stop")
     stop = 0
+    y_min = 0
+    y_max = 0
+    movement_count = 0
+    muscle_max = 0
     data = Text(app, text = "")
     picture = Picture(app, image="white.png",width=300,height=250)
     app.display()
