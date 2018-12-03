@@ -5,11 +5,15 @@ Created on Sun Nov 25 17:11:09 2018
 
 @author: yuanjihuang
 """
-
+from IMU import IMUupdate,acc_IMUupdate
+import board
+import busio
+import adafruit_l3gd20
 from scipy import signal
 import numpy as np
 import time
 import csv
+import math
 from guizero import App,Text,PushButton,Picture
 import Adafruit_ADS1x15
 import Adafruit_ADXL345
@@ -19,11 +23,14 @@ import datetime
 class Sensor:
     def __init__(self,max_len = 20):
         self.adc = Adafruit_ADS1x15.ADS1115(address = 0x48)
-        self.acel = Adafruit_ADXL345.ADXL345(address = 0x53)   
+        self.acel = Adafruit_ADXL345.ADXL345(address = 0x53)
+        i2c = busio.I2C(board.SCL,board.SDA)
+        self.l3gd20 = adafruit_l3gd20.L3GD20_I2C(i2c)
         self.cur_time = 0
         self.time = [0]
         self.muscle = []
-        self.acc = []   
+        self.acc = []
+        self.gyro = []
         self.max_len = max_len
     def check_len(self):
         if len(self.time) > self.max_len:
@@ -32,6 +39,8 @@ class Sensor:
             self.muscle.pop(0)
         if len(self.acc) > self.max_len:
             self.acc.pop(0)
+        if len(self.gyro) > self.max_len:
+            self.gyro.pop(0)        
     def read(self):
         #add time
         self.cur_time += 1
@@ -42,17 +51,23 @@ class Sensor:
         #add acc
         x,y,z = self.acel.read()
         self.acc.append((x,y,z))
+        self.gyro.append(self.l3gd20.gyro)
         #check length
         #print(self.muscle,self.acc)
         self.check_len()
-        return (self.muscle, self.acc)
+        gx,gy,gz = self.l3gd20.gyro
+        #angle_x, angle_y,angle_z = IMUupdate(gx,gy,gz,x,y,z)
     
     def save_csv(self,name):
         #print(self.cur_time)
         with open(name,'w') as output:
             writer = csv.writer(output, delimiter = ',', lineterminator = '\n')
             for i in range(len(self.muscle)):  
-                writer.writerow([self.time[i],self.muscle[i],self.acc[i][0],self.acc[i][1],self.acc[i][2]])
+                writer.writerow([self.time[i],\
+                                 self.muscle[i],\
+                                 self.acc[i][0],self.acc[i][1],self.acc[i][2],\
+                                 self.gyro[i][0],self.gyro[i][1],self.gyro[i][2]]
+                                 )
         
         
         
@@ -87,7 +102,7 @@ def calibrate_result():
     a = muscle_max / (y_max-y_min)
     plt.plot(list1,f3*a)
     plt.savefig('tem.png')
-    print(y_min,y_max,muscle_max)
+    #print(y_min,y_max,muscle_max)
     plt.clf()
     return 'tem.png'
 
@@ -121,7 +136,7 @@ def repeater(sensor,count):
         #print('stop is 1')
         sensor.read()
         if count == 20:
-            print(sensor.muscle[-1],sensor.acc[-1][1])
+            #print(sensor.muscle[-1],sensor.acc[-1][1])
             sensor.save_csv('cali_data.csv')
             count = 0
         picture.after(50,repeater,args=[sensor,count+1])
@@ -151,7 +166,7 @@ def train_repeater(sensor,count,state,direction):
     
     # state: 0 mid, 1 up, -1 down
     # direction: 1 up, -1 down
-    global y_min,y_max,muscle_max,movement_count
+    global y_min,y_max,muscle_max,movement_count,actual_cal
     if stop == 1:
         sensor.read()
         if direction == 1: # arm is going up
@@ -176,8 +191,11 @@ def train_repeater(sensor,count,state,direction):
                     direction = 1
 
         if count == 20:
+            power = abs(sensor.acc[-2][1] - sensor.acc[-1][1]) * sensor.muscle[-1] / 10000
+            actual_cal = (movement_count/target_count) * calorie
             print(sensor.muscle[-1],sensor.acc[-1][1],state,direction)
             data.value = 'count: '+str(movement_count)+'/'+str(target_count)
+            current_data.value = 'calorie: '+str(actual_cal)+' power:'+str(power)+'W'
             sensor.save_csv('train_data.csv')
             count = 0
         
@@ -247,7 +265,8 @@ def uploadTrainingSummary(history):
     traininghistory = mydb["TrainingHistory"]
     traininghistory.insert_one(history)
 def finish():
-    actual_cal = (movement_count/target_count) * calorie
+    global movement_count,actual_cal
+    
     history = {'userid':'kunjian','date':str(datetime.datetime.now())[0:10],
                'movement':[movement_name],'target':[target_count],'count':[movement_count],
                'qualifiedrate':[100],'target_cal':calorie,'actual_cal':actual_cal}
@@ -255,8 +274,30 @@ def finish():
     data.value = 'upload finished!'
     time.sleep(1)
     data.value = ''
+    current_data.value = ''
     movement_count = 0
+    picture.value = 'coupon.png'
     
+def boxing():
+    global stop,fig
+    stop = 1
+    picture.value = 'white.png'
+    sensor = Sensor(100)
+    data.after(200,boxing_repeater,args=[sensor,1000])
+
+def boxing_repeater(sensor,hp):
+    global stop
+    data.value = 'hp left: ' + str(hp)
+    if stop == 1 and hp > 0:
+        sensor.read()
+        print(sensor.acc[-1][0])
+        if sensor.acc[-1][0] > 300:
+            hp = hp-(sensor.acc[-1][0]-300)
+            data.value = 'punch!' + 'hp left: ' + str(hp)
+        data.after(200,boxing_repeater,args=[sensor,hp])
+    else:
+        data.value = 'game finished!'
+        stop = 0
 if __name__ == "__main__":
     client = pymongo.MongoClient("mongodb+srv://kunjian:iotproject@cluster0-ttnra.mongodb.net/test?retryWrites=true")
     mydb = client["IoTProject"]
@@ -266,17 +307,20 @@ if __name__ == "__main__":
     calorie = plan[0]['calorie']
     app = App(title="AI Trainer",layout="grid",bg=(255,204,204))
     welcome_message = Text(app, text='Current movement:'+movement_name, grid=[0,0,6,1],size=20)
-    calibrate = PushButton(app, command=calibrate, text="Calibrate",width = 12, grid=[1,1])
-    train = PushButton(app, command=train, text="Train", grid=[2,1])
-    stop_btn = PushButton(app, command=stop_func, text="Stop", grid=[4,1])
-    finish_btn = PushButton(app, command=finish , text="Finish",width = 12, grid=[5,1])
+    calibrate = PushButton(app, command=calibrate, text="Calibrate",width = 10, grid=[1,1])
+    train = PushButton(app, command=train, text="Train",width = 10, grid=[2,1])
+    stop_btn = PushButton(app, command=stop_func, text="Stop", width = 10, grid=[3,1])
+    finish_btn = PushButton(app, command=finish , text="Finish",width = 10, grid=[4,1])
+    boxing_btn = PushButton(app, command=boxing , text="boxing",width = 10, grid=[5,1])
     stop = 0
     y_min = 0
     y_max = 0
     movement_count = 0
     muscle_max = 0
+    actual_cal = 0
     data = Text(app, text = "", grid=[0,2,6,1],size=20)
-    picture = Picture(app, image="white.png",width=500,height=250, grid=[0,3,6,1])
+    current_data = Text(app, text = "", grid=[0,3,6,1],size=20)
+    picture = Picture(app, image="white.png",width=500,height=240, grid=[0,4,6,1])
     app.display()
     
 
