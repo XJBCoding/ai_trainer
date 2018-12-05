@@ -5,74 +5,131 @@ Created on Sun Nov 25 17:11:09 2018
 
 @author: yuanjihuang
 """
-from IMU import IMUupdate,acc_IMUupdate
-import board
-import busio
-import adafruit_l3gd20
+# from IMU import IMUupdate,acc_IMUupdate
 from scipy import signal
 import numpy as np
 import time
-import csv
-import math
-from guizero import App,Text,PushButton,Picture
-import Adafruit_ADS1x15
-import Adafruit_ADXL345
+from guizero import App, Text, PushButton, Picture
 import matplotlib.pyplot as plt
 import pymongo
 import datetime
-class Sensor:
-    def __init__(self,max_len = 20):
-        self.adc = Adafruit_ADS1x15.ADS1115(address = 0x48)
-        self.acel = Adafruit_ADXL345.ADXL345(address = 0x53)
-        i2c = busio.I2C(board.SCL,board.SDA)
-        self.l3gd20 = adafruit_l3gd20.L3GD20_I2C(i2c)
-        self.cur_time = 0
-        self.time = [0]
-        self.muscle = []
-        self.acc = []
-        self.gyro = []
-        self.max_len = max_len
-    def check_len(self):
-        if len(self.time) > self.max_len:
-            self.time.pop(0)
-        if len(self.muscle) > self.max_len:
-            self.muscle.pop(0)
-        if len(self.acc) > self.max_len:
-            self.acc.pop(0)
-        if len(self.gyro) > self.max_len:
-            self.gyro.pop(0)        
-    def read(self):
-        #add time
-        self.cur_time += 1
-        self.time.append(self.cur_time)
-        #add muscle
-        a = self.adc.read_adc(0, gain=(2/3))
-        self.muscle.append(a)
-        #add acc
-        x,y,z = self.acel.read()
-        self.acc.append((x,y,z))
-        self.gyro.append(self.l3gd20.gyro)
-        #check length
-        #print(self.muscle,self.acc)
-        self.check_len()
-        gx,gy,gz = self.l3gd20.gyro
-        #angle_x, angle_y,angle_z = IMUupdate(gx,gy,gz,x,y,z)
-    
-    def save_csv(self,name):
-        #print(self.cur_time)
-        with open(name,'w') as output:
-            writer = csv.writer(output, delimiter = ',', lineterminator = '\n')
-            for i in range(len(self.muscle)):  
-                writer.writerow([self.time[i],\
-                                 self.muscle[i],\
-                                 self.acc[i][0],self.acc[i][1],self.acc[i][2],\
-                                 self.gyro[i][0],self.gyro[i][1],self.gyro[i][2]]
-                                 )
-        
-        
-        
+from sensor import Sensor
+from controller import PlanController
+from server import run_server
+
+
+
+def stop_func():
+    global stop
+    stop = 0
+
+
+def finish():
+    global movement_count, actual_cal
+
+    history = {'userid': 'kunjian', 'date': str(datetime.datetime.now())[0:10],
+               'movement': [movement_name], 'target': [target_count], 'count': [movement_count],
+               'qualifiedrate': [100], 'target_cal': calorie, 'actual_cal': actual_cal}
+    uploadTrainingSummary(history)
+    data.value = 'upload finished!'
+    time.sleep(1)
+    data.value = ''
+    current_data.value = ''
+    movement_count = 0
+    picture.value = 'coupon.png'
+
+
+def boxing():
+    global stop, fig
+    stop = 1
+    picture.value = 'white.png'
+    sensor = Sensor(100)
+    data.after(200, boxing_repeater, args=[sensor, 1000])
+
+
+def boxing_repeater(sensor, hp):
+    global stop
+    data.value = 'hp left: ' + str(hp)
+    if stop == 1 and hp > 0:
+        sensor.read()
+        print(sensor.acc[-1][0])
+        if sensor.acc[-1][0] > 300:
+            hp = hp - (sensor.acc[-1][0] - 300)
+            data.value = 'punch!' + 'hp left: ' + str(hp)
+        data.after(200, boxing_repeater, args=[sensor, hp])
+    else:
+        data.value = 'game finished!'
+        stop = 0
+
+
+def train_init():
+    plan = getTodayTraining('kunjian')
+    movement_name = plan[0]['name']
+    target_count = plan[0]['unit']
+    calorie = plan[0]['calorie']
+
+
+
+
+
+def start_server():
+    global status
+    status,id = run_server()
+    if status == 1:
+        plan_count = 0
+        planController = PlanController(id)
+        signin_UI()
+
+
+def signin_UI():
+    welcome_message.hide()
+    button1.update_command(show_training_plan)
+    button1.set_text("Train")
+    button2.visible = 1
+
+def show_training_plan():
+
+    button1.update_command(next)
+    button1.set_text("Next")
+    button2.visible = 0
+    welcome_pic.resize(50,50)
+    #get_today_training()
+    display_plan = "Today\'s Training\n"
+    for item in planController.plan:
+        display_plan  =  display_plan + "Movement: " + item['name'] + "    Target: " + item["unit"]+"\n"
+    train_message.set(display_plan)
+    train_message.visible = 1
+
+def next():
+    train_message.visible = 0
+    training_message1.visible = 1
+    button1.update_command(calibrate)
+    button1.set_text("Calibrate")
+    button2.update_command(start_train)
+    button2.set_text("Start Training")
+    training_message1.visible = 1
+    calibrate_pic.visible = 1
+    training_message2.visible = 1
+
+
+def cal_repeater(sensor, count):
+    if stop == 1:
+        # print('stop is 1')
+        sensor.read()
+        if count == 20:
+            # print(sensor.muscle[-1],sensor.acc[-1][1])
+            sensor.save_csv('cali_data.csv')
+            count = 0
+        calibrate_pic.after(50, cal_repeater, args=[sensor, count + 1])
+        # print('next round')
+    else:
+        name = calibrate_result()
+        calibrate_pic.values = name
+        print('end')
+
+
 def calibrate_result():
-    global y_min,y_max,muscle_max
+    global y_min, y_max, muscle_max
     ftemp = 'cali_data.csv'
     fh = open(ftemp)
     list1 = []
@@ -86,32 +143,85 @@ def calibrate_result():
         list1.append(int(time))
         list2.append(int(muscle))
         list3.append(int(axis_y))
-    b,a = signal.butter(10,0.2,'low')
-    f2 = signal.lfilter(b,a,list2)
-    f3 = signal.lfilter(b,a,list3)
+    b, a = signal.butter(10, 0.2, 'low')
+    f2 = signal.lfilter(b, a, list2)
+    f3 = signal.lfilter(b, a, list3)
     sort_f2 = sorted(f2)
     sort_f3 = sorted(f3)
     y_min = np.mean(sort_f3[:90])
     y_max = np.mean(sort_f3[-90:])
     muscle_max = np.mean(sort_f2[-100:])
-    
+
     if muscle_max > 16000:
         muscle_max = 16000
-    plt.hlines(muscle_max, list1[0], list1[-1], colors = "red", linestyles = "dashed")
-    plt.plot(list1,f2)
-    a = muscle_max / (y_max-y_min)
-    plt.plot(list1,f3*a)
-    plt.savefig('tem.png')
-    #print(y_min,y_max,muscle_max)
+    plt.hlines(muscle_max, list1[0], list1[-1], colors="red", linestyles="dashed")
+    plt.plot(list1, f2)
+    a = muscle_max / (y_max - y_min)
+    plt.plot(list1, f3 * a)
+    plt.savefig('calibration_result.png')
     plt.clf()
-    return 'tem.png'
+    return 'calibration_result.png'
 
+
+def calibrate():
+    global stop
+    calibrate_pic.value = 'white.png'
+    sensor = Sensor(300)
+    stop = 1
+
+    training_message1.visible = 0
+    training_message2.visible = 0
+    calibrate_pic.visible = 0
+    button2.visible = 0
+    button1.update_command(finish_calibrate)
+    button1.set_text("Finish")
+    calibrate_message.visible = 1
+    calibrate_pic.visible = 1
+
+    calibrate_pic.after(50, cal_repeater, args=[sensor, 0])
+
+
+def finish_calibrate():
+    global stop
+    stop = 0
+    calibrate_message.visible = 0
+    calibrate_pic.visible = 0
+    button1.update_command(calibrate)
+    '''
+    do calibrate first
+    '''
+    button2.visible = 1
+    training_message1.visible = 1
+    calibrate_pic.visible = 1
+    training_message2.visible = 1
+    button1.set_text("Calibrate Again")
+
+def start_train():
+    button1.visible = 0
+    button2.visible = 0
+    training_message1.visible = 0
+    calibrate_pic.visible = 0
+    training_message2.visible = 0
+    current_movement = planController.plan[plan_count]['name']
+    current_weight = int(planController.recommendWeight(current_movement))
+    current_target_count = int(planController.plan[plan_count]['unit'])
+    current_calorie = float(planController.caloriePerSet(current_movement))
+    tem = "Current Movement:" + current_movement+ " Weight: " +str(current_weight)+  " Goal: " +\
+                              str(current_target_count)+"\n"
+    intermediate_message.set_text(tem)
+    intermediate_message.visible = 1
+    button1.update_command(train)
+    button1.set_text("Begin")
+    button1.visible = 1
+    intermediate_pic.visible = 1
+
+'''
 def train_result():
     ftemp = 'train_data.csv'
     fh = open(ftemp)
     list1 = []
     list2 = []
-    list3 = []    
+    list3 = []
     for line in fh:
         pieces = line.split(',')
         time = pieces[0]
@@ -120,207 +230,174 @@ def train_result():
         list1.append(int(time))
         list2.append(int(muscle))
         list3.append(int(axis_y))
-    b,a = signal.butter(10,0.3,'low')
-    f2 = signal.lfilter(b,a,list2)
-    f3 = signal.lfilter(b,a,list3)
-    plt.hlines(muscle_max, list1[0], list1[-1], colors = "red", linestyles = "dashed")
-    plt.plot(list1,f2)
-    a = muscle_max / (y_max-y_min)
-    plt.plot(list1,f3*a)
+    b, a = signal.butter(10, 0.3, 'low')
+    f2 = signal.lfilter(b, a, list2)
+    f3 = signal.lfilter(b, a, list3)
+    plt.hlines(muscle_max, list1[0], list1[-1], colors="red", linestyles="dashed")
+    plt.plot(list1, f2)
+    a = muscle_max / (y_max - y_min)
+    plt.plot(list1, f3 * a)
     plt.savefig('train_tem.png')
     plt.clf()
     return 'train_tem.png'
+'''
 
-def repeater(sensor,count):
-    if stop == 1:
-        #print('stop is 1')
-        sensor.read()
-        if count == 20:
-            #print(sensor.muscle[-1],sensor.acc[-1][1])
-            sensor.save_csv('cali_data.csv')
-            count = 0
-        picture.after(50,repeater,args=[sensor,count+1])
-        #print('next round')
-    else:
-        data.value = 'generating result...'
-        name = calibrate_result()
-        data.value = 'Ready for training!'
-        picture.value = name 
-        print('end')
-        
-        
-def calibrate():
-    global stop,fig
-    picture.value = 'white.png'
-    fig = plt.figure()
-    data.value = 'start calibration!'
-    sensor = Sensor(300)
-    stop = 1
-    
-    #data.after(500,data_repeater,args=[sensor])
-    picture.after(50,repeater,args=[sensor,0])
- 
-    
-    
-def train_repeater(sensor,count,state,direction):
-    
+
+def train_repeater(sensor, count, state, direction):
     # state: 0 mid, 1 up, -1 down
     # direction: 1 up, -1 down
-    global y_min,y_max,muscle_max,movement_count,actual_cal
+    global y_min, y_max, muscle_max, movement_count, actual_cal
     if stop == 1:
         sensor.read()
-        if direction == 1: # arm is going up
-            if state == -1: # arm was in the bottom
-                if sensor.acc[-1][1] > y_min: # arm in middle now
+        if direction == 1:  # arm is going up
+            if state == -1:  # arm was in the bottom
+                if sensor.acc[-1][1] > y_min:  # arm in middle now
                     state = 0
-            elif state == 0: # arm was in the middle
-                if sensor.acc[-1][1] > y_max: #arm in top now
+            elif state == 0:  # arm was in the middle
+                if sensor.acc[-1][1] > y_max:  # arm in top now
                     state = 1
             elif state == 1:
                 if sensor.muscle[-1] > muscle_max:
-                    movement_count += 1 # one movement finish
-                    data.value = 'movement complete! count: '+str(movement_count)+'/'+str(target_count)
+                    movement_count += 1  # one movement finish
+                    tem = "Current Movement:" + current_movement + " Weight: " + str(current_weight) + " Goal: "\
+                          + str(movement_count)+"/" + str(current_target_count) + "\n"
+                    intermediate_message.set_text(tem)
                     direction = -1
         elif direction == -1:
             if state == 1:
                 if sensor.acc[-1][1] < y_max:
                     state = 0
-            elif state == 0: # arm was in the middle
-                if sensor.acc[-1][1] < y_min: #arm in top now
+            elif state == 0:  # arm was in the middle
+                if sensor.acc[-1][1] < y_min:  # arm in top now
                     state = -1
                     direction = 1
 
         if count == 20:
-            power = abs(sensor.acc[-2][1] - sensor.acc[-1][1]) * sensor.muscle[-1] / 10000
-            actual_cal = (movement_count/target_count) * calorie
-            print(sensor.muscle[-1],sensor.acc[-1][1],state,direction)
-            data.value = 'count: '+str(movement_count)+'/'+str(target_count)
-            current_data.value = 'calorie: '+str(actual_cal)+' power:'+str(power)+'W'
+            power = abs(sensor.acc[-2][1] - sensor.acc[-1][1]) * current_weight / 10000
+            actual_cal = (movement_count / current_target_count) * current_calorie
+            print(sensor.muscle[-1], sensor.acc[-1][1], state, direction)
+            # set text
+            statistic_message.set_text("\nCalorie consumption: "+str(actual_cal)+"\nAcceleration: 0 m/s^2\
+                                            \nStrength: 0% \nPower: "+str(power)+"W\nDuration: 0 mins \n", color="white")
             sensor.save_csv('train_data.csv')
             count = 0
-        
-        picture.after(50,train_repeater,args=[sensor,count+1,state,direction])
-        #print('next round')
+        statistic_message.after(50, train_repeater, args=[sensor, count + 1, state, direction])
     else:
-        name = train_result()
-        picture.value = name 
         print('training_end')
-        
-        
+
+
 def train():
-    global stop,fig
+    global stop,plan_count
     stop = 1
-    picture.value = 'white.png'
+    plan_count += 1
+    statistic_message.set_text("\nCalorie consumption: 0\nAcceleration: 0 m/s^2\
+                                \nStrength: 0% \nDuration: 0 mins \n", color="white")
+    button1.visible = 0
+    button2.visible = 0
+    intermediate_message.visible = 0
+    intermediate_pic.visible = 0
+    movement_message.visible = 1
+    button1.update_command(skip)
+    button1.set_text("Skip Movement")
+    button1.visible = 1
+    button2.update_command(terminate)
+    button2.set_text("Terminate Training")
+    button2.visible = 1
+    movement_message.visible = 1
+    statistic_message.visible = 1
+
     sensor = Sensor(5000)
-    data.after(50,train_repeater,args=[sensor,0,-1,1])
-    
-    
-    
-def stop_func():
-    global stop
-    stop = 0
-    
-def generatePlan(id):
-    global mydb
-    movement_num = 1
-    profile = mydb['Profile']
-    movements = mydb['Movements']
-    trainingplan = mydb["TrainingPlan"]
-    target = profile.find_one({"userid": id})["target"]
-    muscles = ["chest", "back", "biceps", "triceps", "shoulder", "quadricep", "hamstring"]
-    day = 0
-    for muscle in muscles:
-        day += 1
-        muscle_move = list()
-        for movement in movements.find({'type': target, 'muscle': muscle}):
-            muscle_move.append(movement["name"])
-        selection = random.sample(range(len(muscle_move)), movement_num)
-        for i in selection:
-            mov_name = muscle_move[i]
-            mov_unit = movements.find_one({'name': mov_name})["unit"]
-            mov_calorie = movements.find_one({'name': mov_name})["calorie"]
-            trainingplan.insert_one({'userid': id, 'day': day, 'name': mov_name, 'type': target, 'muscle': muscle,
-                                     'unit': mov_unit, 'calorie': mov_calorie})
+    statistic_message.after(50, train_repeater, args=[sensor, 0, -1, 1])
 
-# The return object is a list of dictionaries, dictionaries' structure is the same as that in mongoDB
-def getTodayTraining(id):
-    global mydb
-    day = 0
-    trainingplan = mydb["TrainingPlan"]
-
-    if trainingplan.find_one({'userid': id}) is None:
-        generatePlan(id)
-
-    for plan in trainingplan.find({'userid': id}):
-        if plan['day'] > day:
-            day = plan['day']
-
-    temp_plan = list()
-    for movement in trainingplan.find({'userid': id, 'day':day}):
-        temp_plan.append(movement)
-    return temp_plan
-
-def uploadTrainingSummary(history):
-    global mydb
-    traininghistory = mydb["TrainingHistory"]
-    traininghistory.insert_one(history)
-def finish():
-    global movement_count,actual_cal
-    
-    history = {'userid':'kunjian','date':str(datetime.datetime.now())[0:10],
-               'movement':[movement_name],'target':[target_count],'count':[movement_count],
-               'qualifiedrate':[100],'target_cal':calorie,'actual_cal':actual_cal}
-    uploadTrainingSummary(history)
-    data.value = 'upload finished!'
-    time.sleep(1)
-    data.value = ''
-    current_data.value = ''
-    movement_count = 0
-    picture.value = 'coupon.png'
-    
-def boxing():
-    global stop,fig
-    stop = 1
-    picture.value = 'white.png'
-    sensor = Sensor(100)
-    data.after(200,boxing_repeater,args=[sensor,1000])
-
-def boxing_repeater(sensor,hp):
-    global stop
-    data.value = 'hp left: ' + str(hp)
-    if stop == 1 and hp > 0:
-        sensor.read()
-        print(sensor.acc[-1][0])
-        if sensor.acc[-1][0] > 300:
-            hp = hp-(sensor.acc[-1][0]-300)
-            data.value = 'punch!' + 'hp left: ' + str(hp)
-        data.after(200,boxing_repeater,args=[sensor,hp])
+def skip():
+    movement_message.visible = 0
+    button2.visible = 0
+    statistic_message.visible = 0
+    #if have next movement
+    if plan_count < 4:
+        planController.updateHistory(current_movement,current_target_count,movement_count,100,current_calorie,actual_cal)
+        start_train()
     else:
-        data.value = 'game finished!'
-        stop = 0
+        terminate()
+    #if not: call terminate
+
+def terminate():
+    planController.uploadTrainingHistory()
+    movement_message.visible = 0
+    button2.visible = 0
+    button1.visible = 0
+    statistic_message.visible = 0
+
+    terminate_message.visible = 1
+    terminate.set_text("\n\n\nCongratulations!\nYou have finished today's training\n Coupon code: "+str(planController.generateCoupon)+"\nSaving progress to our database...")
+    app.after(3000, welcome)
+
+
+def welcome():
+    terminate_message.visible = 0
+    welcome_pic.resize(400, 400)
+    button1.update_command(show_training_plan)
+    button1.set_text("Training")
+    button2.update_command(boxing)
+    button2.set_text("Boxing")
+    button1.visible = 1
+    button2.visible = 1
+
+def check_status():
+    pass
+
 if __name__ == "__main__":
-    client = pymongo.MongoClient("mongodb+srv://kunjian:iotproject@cluster0-ttnra.mongodb.net/test?retryWrites=true")
-    mydb = client["IoTProject"]
-    plan = getTodayTraining('kunjian')
-    movement_name = plan[0]['name']
-    target_count = plan[0]['unit']
-    calorie = plan[0]['calorie']
-    app = App(title="AI Trainer",layout="grid",bg=(255,204,204))
-    welcome_message = Text(app, text='Current movement:'+movement_name, grid=[0,0,6,1],size=20)
-    calibrate = PushButton(app, command=calibrate, text="Calibrate",width = 10, grid=[1,1])
-    train = PushButton(app, command=train, text="Train",width = 10, grid=[2,1])
-    stop_btn = PushButton(app, command=stop_func, text="Stop", width = 10, grid=[3,1])
-    finish_btn = PushButton(app, command=finish , text="Finish",width = 10, grid=[4,1])
-    boxing_btn = PushButton(app, command=boxing , text="boxing",width = 10, grid=[5,1])
+    status = 0
+    planController = None
+    plan_count = 0
     stop = 0
-    y_min = 0
-    y_max = 0
-    movement_count = 0
-    muscle_max = 0
-    actual_cal = 0
-    data = Text(app, text = "", grid=[0,2,6,1],size=20)
-    current_data = Text(app, text = "", grid=[0,3,6,1],size=20)
-    picture = Picture(app, image="white.png",width=500,height=240, grid=[0,4,6,1])
+    current_movement = ''
+    current_weight = 0
+    current_target_count = 0
+    current_calorie = 0
+    app = App(title="AI Trainer", layout="auto", bg=(239, 106, 135))
+    welcome_pic = Picture(app, image="welcome.jpg", width=400, height=400)
+    welcome_message = Text(app, text="Please Login on Your Phone\nto Unlock This Device", color="white", size=20)
+    button1 = PushButton(app, command=start_server, text="Syncronize", width=12)
+    button2 = PushButton(app, command=boxing, text="Boxing", width=12)
+    button2.visible = 0
+
+    # plan page
+    train_message = Text(app, text="", color="white", size=20)
+    train_message.visible = 0
+
+    # pre-train page
+    training_message1 = Text(app, text="Please calibrate before training!", color="white", size=15)
+    training_message1.visible = 0
+    training_message2 = Text(app,
+                             text="Peak of red line determine your max strength.\nBlue line determine the range of your movement.",
+                             color="white", size=15)
+    training_message2.visible = 0
+    calibrate_pic = Picture(app, image="button.jpg", width=400, height=300)
+    calibrate_pic.visible = 0
+
+    # calibrate
+    calibrate_message = Text(app, text="Please Finish the Standard\nMovement for Three Times", color="white", size=15)
+    calibrate_message.visible = 0
+
+    # training
+    movement_message = Text(app, text="", color="white", size=15)
+    movement_message.visible = 0
+    statistic_message = Text(app, text="\nCalorie consumption:\nAcceleration:\nStrength:\nDuration:\n", color="white",
+                             size=15)
+    statistic_message.visible = 0
+
+    # intermediate
+    intermediate_message = Text(app, text="Next Movement:  , Weight: , Goal:\n", color="white", size=15)
+    intermediate_message.visible = 0
+    intermediate_pic = Picture(app, image="button.jpg", width=400, height=300)
+    intermediate_pic.visible = 0
+
+    # terminate page
+    terminate_message = Text(app,
+                             text="",
+                             color="white", size=15)
+    terminate_message.visible = 0
     app.display()
-    
+
 
