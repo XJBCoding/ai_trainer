@@ -54,11 +54,12 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
         return
 
 def run_server():
+    global id
     print('starting server...')
     message = ""
     # Server settings
     # Choose port 8080, for port 80, which is normally used for a http server, you need root access
-    server_address = ('160.39.182.221', 8080)
+    server_address = ('129.236.232.99', 8080)
     httpd = HTTPServer(server_address, testHTTPServer_RequestHandler)
     print('running server...')
     #while message != "Successfully sign in":

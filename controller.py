@@ -6,11 +6,6 @@ import datetime
 
 class PlanController:
     def __init__(self, id):
-        self.id = id
-        self.plan = self.getTodayTraining()
-        self.weight = self.getWeight()
-        self.history = {'userid': id, 'date': str(datetime.datetime.now())[0:10],'movement':[],
-                        'target':[],'count':[],'qualifiedrate':[],'target_cal':0,'actual_cal':0}
         client = pymongo.MongoClient(
             "mongodb+srv://kunjian:iotproject@cluster0-ttnra.mongodb.net/test?retryWrites=true")
         mydb = client["IoTProject"]
@@ -19,7 +14,12 @@ class PlanController:
         self.trainingPlan = mydb["TrainingPlan"]
         self.historydb = mydb['TrainingHistory']
         self.coupondb = mydb['Coupon']
-
+        self.id = id
+        self.plan = self.getTodayTraining()
+        self.weight = self.getWeight()
+        self.history = {'userid': id, 'date': str(datetime.datetime.now())[0:10],'movement':[],
+                        'target':[],'count':[],'qualifiedrate':[],'target_cal':0,'actual_cal':0}
+        
     # generate exercise plan for a week based on profile
     def generatePlan(self):
         movement_num = 1
@@ -75,13 +75,11 @@ class PlanController:
 
 
     def getWeight(self):
-        return self.profile.find_one({'userid': self.id})["weight"]
+        return float(self.profile.find_one({'userid': self.id})["weight"])
 
     def caloriePerSet(self, movement):
         basicCal = 0.00883 * self.weight
-        global mydb
-        profile = mydb['Movements']
-        movement = profile.find_one({'name': movement})
+        movement = self.profile.find_one({'name': movement})
         addiCal = movement['calorie'] * 5 / movement['unit']
         return format(basicCal + addiCal, '.2f')
 
