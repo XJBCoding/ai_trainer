@@ -139,7 +139,7 @@ def boxing_repeater(sensor):
     if stop == 1:
         sensor.read()
         print(sensor.acc[-1][0])
-        button2.after(200, boxing_repeater, args=[sensor, hp])
+        button2.after(200, boxing_repeater, args=[sensor])
         x_diff = abs(sensor.acc[-1][0] - sensor.acc[-2][0])
         y_diff = abs(sensor.acc[-1][1] - sensor.acc[-2][0])
         accuracy = int((1-y_diff/x_diff) * 100)
