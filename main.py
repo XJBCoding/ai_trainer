@@ -119,7 +119,7 @@ def signin_UI():
 
 def logout():
     global status
-    status =
+    status = inner_signout()
     welcome()
 
 
