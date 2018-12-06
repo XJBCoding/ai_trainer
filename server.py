@@ -7,6 +7,7 @@ import random
 client = pymongo.MongoClient("mongodb+srv://kunjian:iotproject@cluster0-ttnra.mongodb.net/test?retryWrites=true")
 mydb = client["IoTProject"]
 status = 0
+id = None
 
 def signin(id, password):
     global mydb, status
@@ -23,12 +24,11 @@ def signin(id, password):
 def signout():
 	global status
 
-id = None
 # HTTPRequestHandler class
 class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
     # GET
-    global id
     def do_POST(self):
+        global id
         # Send response status code
         self.send_response(200)
         # Send headers

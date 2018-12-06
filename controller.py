@@ -18,11 +18,11 @@ class PlanController:
         self.plan = self.getTodayTraining()
         self.weight = self.getWeight()
         self.history = {'userid': id, 'date': str(datetime.datetime.now())[0:10],'movement':[],
-                        'target':[],'count':[],'qualifiedrate':[],'target_cal':0,'actual_cal':0}
+                        'target':[],'count':[],'qualifiedrate':[],'target_cal':0,'actual_cal':0, 'weight':[]}
         
     # generate exercise plan for a week based on profile
     def generatePlan(self):
-        movement_num = 1
+        movement_num = 3
         target = self.profile.find_one({"userid": self.id})["target"]
         muscles = ["chest", "back", "biceps", "triceps", "shoulder", "quadricep", "hamstring"]
         day = 0
@@ -79,7 +79,7 @@ class PlanController:
 
     def caloriePerSet(self, movement):
         basicCal = 0.00883 * self.weight
-        movement = self.profile.find_one({'name': movement})
+        movement = self.movements.find_one({'name': movement})
         addiCal = movement['calorie'] * 5 / movement['unit']
         return format(basicCal + addiCal, '.2f')
 
@@ -93,13 +93,14 @@ class PlanController:
                 day = plan['day']
         self.trainingPlan.delete_many({"userid": self.id, 'day': day})
 
-    def updateHistory(self,movement,target,count,qualifiedrate,target_cal,actual_cal):
+    def updateHistory(self,movement,target,count,qualifiedrate,target_cal,actual_cal, weight):
         self.history['movement'].append(movement)
         self.history['target'].append(target)
         self.history['count'].append(count)
         self.history['qualifiedrate'].append(qualifiedrate)
         self.history['target_cal'] += target_cal
         self.history['actual_cal'] += actual_cal
+        self.history['weight'].append(weight)
 
     # The input should be a well-structured dictionary object
     def uploadTrainingHistory(self):
