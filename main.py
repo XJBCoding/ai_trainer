@@ -75,7 +75,7 @@ def welcome():
     button3.visible = 0
     button2.visible = 0
     button1.visible = 0
-    welcome_pic.resize(400, 400)
+    welcome_pic.resize(300, 300)
     welcome_message.set("Please Login on Your Phone\nto Unlock This Device")
     welcome_message.show()
     button1.update_command(start_server)
@@ -105,7 +105,7 @@ def signin_UI():
     button3.visible = 0
     welcome_message.hide()
     terminate_message.visible = 0
-    welcome_pic.resize(200, 200)
+    welcome_pic.resize(300, 300)
     button1.update_command(show_training_plan)
     button1.set_text("Training")
     button2.update_command(boxing)
@@ -124,7 +124,7 @@ def logout():
 
 
 def boxing():
-    welcome_pic.resize(25,25)
+    welcome_pic.resize(50,50)
     welcome_message.hide()
     button3.visible = 0
     button2.visible = 0
@@ -203,7 +203,7 @@ def show_training_plan():
     button1.update_command(next)
     button1.set_text("Next")
     button2.visible = 0
-    welcome_pic.resize(25,25)
+    welcome_pic.resize(50, 50)
     #get_today_training()
     display_plan = "Today\'s Training\n"
     for item in planController.plan:
@@ -497,38 +497,38 @@ if __name__ == "__main__":
     start_time = 0
     app = App(title="AI Trainer", layout="auto", bg=(239, 106, 135))
     welcome_pic = Picture(app, image="welcome.jpg", width=200, height=200)
-    welcome_message = Text(app, text="Please Login on Your Phone\nto Unlock This Device", color="white", size=12)
-    button1 = PushButton(app, command=start_server,text="Syncronize", width=12)
-    button2 = PushButton(app, command=boxing, text="Boxing", width=12)
+    welcome_message = Text(app, text="Please Login on Your Phone\nto Unlock This Device", color="white", size=15)
+    button1 = PushButton(app, command=start_server,text="Syncronize", width=15)
+    button2 = PushButton(app, command=boxing, text="Boxing", width=15)
     button2.visible = 0
 
     # plan page
-    train_message = Text(app, text="", color="white", size=12)
+    train_message = Text(app, text="", color="white", size=15)
     train_message.visible = 0
 
     # pre-train page
-    training_message1 = Text(app, text="Please calibrate before training!", color="white", size=10)
+    training_message1 = Text(app, text="Please calibrate before training!", color="white", size=13)
     training_message1.visible = 0
     training_message2 = Text(app,
                              text="Peak of red line determine your max strength.\nBlue line determine the range of your movement.",
-                             color="white", size=10)
+                             color="white", size=13)
     training_message2.visible = 0
     calibrate_pic = Picture(app, image="button.jpg", width=200, height=150)
     calibrate_pic.visible = 0
 
     # calibrate
-    calibrate_message = Text(app, text="Please Finish the Standard\nMovement for Three Times", color="white", size=10)
+    calibrate_message = Text(app, text="Please Finish the Standard\nMovement for Three Times", color="white", size=13)
     calibrate_message.visible = 0
 
     # training
-    movement_message = Text(app, text="", color="white", size=10)
+    movement_message = Text(app, text="", color="white", size=13)
     movement_message.visible = 0
     statistic_message = Text(app, text="\nCalorie consumption:\nAcceleration:\nStrength:\nDuration:\n", color="white",
-                             size=10)
+                             size=13)
     statistic_message.visible = 0
 
     # intermediate
-    intermediate_message = Text(app, text="Next Movement:  , Weight: , Goal:\n", color="white", size=10)
+    intermediate_message = Text(app, text="Next Movement:  , Weight: , Goal:\n", color="white", size=13)
     intermediate_message.visible = 0
     intermediate_pic = Picture(app, image="button.jpg", width=200, height=150)
     intermediate_pic.visible = 0
@@ -536,11 +536,11 @@ if __name__ == "__main__":
     # terminate page
     terminate_message = Text(app,
                              text="",
-                             color="white", size=10)
+                             color="white", size=13)
     terminate_message.visible = 0
 
     # updates
-    button3 = PushButton(app, text="Back", command=logout, width=12)
+    button3 = PushButton(app, text="Back", command=logout, width=15)
     button3.visible = 0
     opponent_id_message = Text(app, text="")
     opponent_id_message.visible = 0
