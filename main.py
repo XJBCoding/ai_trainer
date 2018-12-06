@@ -139,12 +139,13 @@ def boxing_repeater(sensor,hp):
     if stop == 1:
         sensor.read()
         print(sensor.acc[-1][0])
-        button2.after(200, boxing_repeater, args=[sensor,hp])
         speed = int(abs(sensor.acc[-1][0]-300)/10)
         if speed > 10:
             speed = 10
+        print(speed)
         hp -= speed
         get_life_bar(hp)
+        button2.after(200, boxing_repeater, args=[sensor, hp])
     else:
         stop = 0
 
