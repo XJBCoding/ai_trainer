@@ -133,9 +133,9 @@ def start_boxing_game():
     #########TODO:add function
     x = 1
 
-def boxing_repeater(sensor, hp):
+def boxing_repeater(sensor):
     global stop
-    if stop == 1 and hp > 0:
+    if stop == 1:
         sensor.read()
         print(sensor.acc[-1][0])
         button2.after(200, boxing_repeater, args=[sensor, hp])
@@ -158,7 +158,7 @@ def start_practice():
     # health = 85
     stop = 1
     sensor = Sensor(100)
-    button2.after(200, boxing_repeater, args=[sensor, hp])
+    button2.after(200, boxing_repeater, args=[sensor])
       # max:100
 
 
