@@ -7,6 +7,7 @@ import random
 client = pymongo.MongoClient("mongodb+srv://kunjian:iotproject@cluster0-ttnra.mongodb.net/test?retryWrites=true")
 mydb = client["IoTProject"]
 status = 0
+id = None
 
 def signin(id, password):
     global mydb, status
@@ -23,12 +24,11 @@ def signin(id, password):
 def signout():
 	global status
 
-id = None
 # HTTPRequestHandler class
 class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
     # GET
-    global id
     def do_POST(self):
+        global id
         # Send response status code
         self.send_response(200)
         # Send headers
@@ -54,11 +54,12 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
         return
 
 def run_server():
+    global id
     print('starting server...')
     message = ""
     # Server settings
     # Choose port 8080, for port 80, which is normally used for a http server, you need root access
-    server_address = ('160.39.182.221', 8080)
+    server_address = ('129.236.232.99', 8080)
     httpd = HTTPServer(server_address, testHTTPServer_RequestHandler)
     print('running server...')
     #while message != "Successfully sign in":

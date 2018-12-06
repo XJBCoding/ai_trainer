@@ -13,6 +13,8 @@ from guizero import App, Text, PushButton, Picture
 import matplotlib.pyplot as plt
 import pymongo
 import datetime
+import random
+import string
 from sensor import Sensor
 from controller import PlanController
 from server import run_server
@@ -73,18 +75,31 @@ def train_init():
 
 
 def start_server():
-    global status
+    global status, planController, movement_num
     status,id = run_server()
+    print(status)
+    print(id+"ok")
+    #status = 1
+    #id ='kunjian@g.c'
     if status == 1:
         plan_count = 0
         planController = PlanController(id)
+        movement_num = len(planController.plan)
+        print(planController.plan)
+        print("database controller created")
         signin_UI()
 
 
 def signin_UI():
     welcome_message.hide()
     button1.update_command(show_training_plan)
-    button1.set_text("Train")
+    terminate_message.visible = 0
+    welcome_pic.resize(200, 200)
+    button1.update_command(show_training_plan)
+    button1.set_text("Training")
+    button2.update_command(boxing)
+    button2.set_text("Boxing")
+    button1.visible = 1
     button2.visible = 1
 
 def show_training_plan():
@@ -92,11 +107,11 @@ def show_training_plan():
     button1.update_command(next)
     button1.set_text("Next")
     button2.visible = 0
-    welcome_pic.resize(50,50)
+    welcome_pic.resize(25,25)
     #get_today_training()
     display_plan = "Today\'s Training\n"
     for item in planController.plan:
-        display_plan  =  display_plan + "Movement: " + item['name'] + "    Target: " + item["unit"]+"\n"
+        display_plan  =  display_plan + "Movement: " + item['name'] + "    Target: " + str(item["unit"])+"\n"
     train_message.set(display_plan)
     train_message.visible = 1
 
@@ -182,7 +197,8 @@ def calibrate():
 
 
 def finish_calibrate():
-    global stop
+    global stop,start_time
+    start_time = time.time()
     stop = 0
     calibrate_message.visible = 0
     calibrate_pic.visible = 0
@@ -197,6 +213,7 @@ def finish_calibrate():
     button1.set_text("Calibrate Again")
 
 def start_train():
+    global current_movement, current_weight, current_target_count, current_calorie, actual_calorie
     button1.visible = 0
     button2.visible = 0
     training_message1.visible = 0
@@ -206,9 +223,10 @@ def start_train():
     current_weight = int(planController.recommendWeight(current_movement))
     current_target_count = int(planController.plan[plan_count]['unit'])
     current_calorie = float(planController.caloriePerSet(current_movement))
+    actual_cal = 0
     tem = "Current Movement:" + current_movement+ " Weight: " +str(current_weight)+  " Goal: " +\
                               str(current_target_count)+"\n"
-    intermediate_message.set_text(tem)
+    intermediate_message.set(tem)
     intermediate_message.visible = 1
     button1.update_command(train)
     button1.set_text("Begin")
@@ -246,7 +264,9 @@ def train_result():
 def train_repeater(sensor, count, state, direction):
     # state: 0 mid, 1 up, -1 down
     # direction: 1 up, -1 down
-    global y_min, y_max, muscle_max, movement_count, actual_cal
+    global y_min, y_max, muscle_max, movement_count, actual_cal, current_target_count,start_time
+    if movement_count == current_target_count:
+        skip()
     if stop == 1:
         sensor.read()
         if direction == 1:  # arm is going up
@@ -261,7 +281,7 @@ def train_repeater(sensor, count, state, direction):
                     movement_count += 1  # one movement finish
                     tem = "Current Movement:" + current_movement + " Weight: " + str(current_weight) + " Goal: "\
                           + str(movement_count)+"/" + str(current_target_count) + "\n"
-                    intermediate_message.set_text(tem)
+                    movement_message.set(tem)
                     direction = -1
         elif direction == -1:
             if state == 1:
@@ -273,12 +293,15 @@ def train_repeater(sensor, count, state, direction):
                     direction = 1
 
         if count == 20:
-            power = abs(sensor.acc[-2][1] - sensor.acc[-1][1]) * current_weight / 10000
-            actual_cal = (movement_count / current_target_count) * current_calorie
+            current_time = time.time()
+            duration = int(current_time - start_time)
+            accleration = abs(sensor.acc[-1][1] - sensor.acc[-3][1])
+            power = 1/4 * current_weight * accleration / 3
+            actual_cal = movement_count  * current_calorie
             print(sensor.muscle[-1], sensor.acc[-1][1], state, direction)
+            strength = float(sensor.muscle[-1] + sensor.muscle[-2] + sensor.muscle[-3])/muscle_max/3
             # set text
-            statistic_message.set_text("\nCalorie consumption: "+str(actual_cal)+"\nAcceleration: 0 m/s^2\
-                                            \nStrength: 0% \nPower: "+str(power)+"W\nDuration: 0 mins \n", color="white")
+            statistic_message.set("\nCalorie consumption: "+str(actual_cal)+"\nAcceleration: "+str(accleration)+" m/s^2 \nStrength: "+str(strength * 100)+"% \nPower: "+str(power)+"W\nDuration: "+str(duration)+"s \n")
             sensor.save_csv('train_data.csv')
             count = 0
         statistic_message.after(50, train_repeater, args=[sensor, count + 1, state, direction])
@@ -290,8 +313,8 @@ def train():
     global stop,plan_count
     stop = 1
     plan_count += 1
-    statistic_message.set_text("\nCalorie consumption: 0\nAcceleration: 0 m/s^2\
-                                \nStrength: 0% \nDuration: 0 mins \n", color="white")
+    statistic_message.set("\nCalorie consumption: 0\nAcceleration: 0 m/s^2\nStrength: 0% \nDuration: 0s \n")
+    movement_message.set("Current Movement:" + current_movement + " Weight: " + str(current_weight) + " Goal: "+str(current_target_count) + "\n")
     button1.visible = 0
     button2.visible = 0
     intermediate_message.visible = 0
@@ -310,41 +333,58 @@ def train():
     statistic_message.after(50, train_repeater, args=[sensor, 0, -1, 1])
 
 def skip():
+    global movement_num, stop, current_movement, current_target_count, movement_count, current_target_calorie, actual_cal, current_weight
     movement_message.visible = 0
     button2.visible = 0
     statistic_message.visible = 0
+    stop=0
+    planController.updateHistory(current_movement,current_target_count,movement_count,100,current_target_count*current_calorie,actual_cal, current_weight)
+    actual_cal = 0
+    movement_count = 0
     #if have next movement
-    if plan_count < 4:
-        planController.updateHistory(current_movement,current_target_count,movement_count,100,current_calorie,actual_cal)
+    if plan_count < movement_num:
         start_train()
     else:
         terminate()
     #if not: call terminate
+def generateCoupon(id):
+    client = pymongo.MongoClient(
+            "mongodb+srv://kunjian:iotproject@cluster0-ttnra.mongodb.net/test?retryWrites=true")
+    mydb = client["IoTProject"]
+    coupondb = mydb['Coupon']
+    coupon = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(15))
+    while coupondb.find_one({'coupon': coupon}) is not None:
+        coupon = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(15))
+    coupondb.insert_one({'userid': id, 'coupon': coupon})
+    return coupon
+
+def deleteLastPlan(id):
+    client = pymongo.MongoClient(
+            "mongodb+srv://kunjian:iotproject@cluster0-ttnra.mongodb.net/test?retryWrites=true")
+    mydb = client["IoTProject"]
+    trainingPlan = mydb['TrainingPlan']
+    day = 0
+    for plan in trainingPlan.find({'userid': id}):
+        if plan['day'] > day:
+            day = plan['day']
+    trainingPlan.delete_many({"userid": id, 'day': day})
 
 def terminate():
+    global plan_count
+    plan_count = 0
     planController.uploadTrainingHistory()
     movement_message.visible = 0
     button2.visible = 0
     button1.visible = 0
     statistic_message.visible = 0
-
+    terminate_message.set("\n\n\nCongratulations!\nYou have finished today's training\n Coupon code: "+str(generateCoupon(planController.id))+"\nSaving progress to our database...")
     terminate_message.visible = 1
-    terminate.set_text("\n\n\nCongratulations!\nYou have finished today's training\n Coupon code: "+str(planController.generateCoupon)+"\nSaving progress to our database...")
+    deleteLastPlan(planController.id)
     app.after(3000, welcome)
 
 
-def welcome():
-    terminate_message.visible = 0
-    welcome_pic.resize(400, 400)
-    button1.update_command(show_training_plan)
-    button1.set_text("Training")
-    button2.update_command(boxing)
-    button2.set_text("Boxing")
-    button1.visible = 1
-    button2.visible = 1
 
-def check_status():
-    pass
+
 
 if __name__ == "__main__":
     status = 0
@@ -355,48 +395,52 @@ if __name__ == "__main__":
     current_weight = 0
     current_target_count = 0
     current_calorie = 0
+    actual_cal = 0
+    movement_count = 0
+    movement_num = 0
+    start_time = 0
     app = App(title="AI Trainer", layout="auto", bg=(239, 106, 135))
-    welcome_pic = Picture(app, image="welcome.jpg", width=400, height=400)
-    welcome_message = Text(app, text="Please Login on Your Phone\nto Unlock This Device", color="white", size=20)
-    button1 = PushButton(app, command=start_server, text="Syncronize", width=12)
+    welcome_pic = Picture(app, image="welcome.jpg", width=200, height=200)
+    welcome_message = Text(app, text="Please Login on Your Phone\nto Unlock This Device", color="white", size=12)
+    button1 = PushButton(app, command=start_server,text="Syncronize", width=12)
     button2 = PushButton(app, command=boxing, text="Boxing", width=12)
     button2.visible = 0
 
     # plan page
-    train_message = Text(app, text="", color="white", size=20)
+    train_message = Text(app, text="", color="white", size=12)
     train_message.visible = 0
 
     # pre-train page
-    training_message1 = Text(app, text="Please calibrate before training!", color="white", size=15)
+    training_message1 = Text(app, text="Please calibrate before training!", color="white", size=10)
     training_message1.visible = 0
     training_message2 = Text(app,
                              text="Peak of red line determine your max strength.\nBlue line determine the range of your movement.",
-                             color="white", size=15)
+                             color="white", size=10)
     training_message2.visible = 0
-    calibrate_pic = Picture(app, image="button.jpg", width=400, height=300)
+    calibrate_pic = Picture(app, image="button.jpg", width=200, height=150)
     calibrate_pic.visible = 0
 
     # calibrate
-    calibrate_message = Text(app, text="Please Finish the Standard\nMovement for Three Times", color="white", size=15)
+    calibrate_message = Text(app, text="Please Finish the Standard\nMovement for Three Times", color="white", size=10)
     calibrate_message.visible = 0
 
     # training
-    movement_message = Text(app, text="", color="white", size=15)
+    movement_message = Text(app, text="", color="white", size=10)
     movement_message.visible = 0
     statistic_message = Text(app, text="\nCalorie consumption:\nAcceleration:\nStrength:\nDuration:\n", color="white",
-                             size=15)
+                             size=10)
     statistic_message.visible = 0
 
     # intermediate
-    intermediate_message = Text(app, text="Next Movement:  , Weight: , Goal:\n", color="white", size=15)
+    intermediate_message = Text(app, text="Next Movement:  , Weight: , Goal:\n", color="white", size=10)
     intermediate_message.visible = 0
-    intermediate_pic = Picture(app, image="button.jpg", width=400, height=300)
+    intermediate_pic = Picture(app, image="button.jpg", width=200, height=150)
     intermediate_pic.visible = 0
 
     # terminate page
     terminate_message = Text(app,
                              text="",
-                             color="white", size=15)
+                             color="white", size=10)
     terminate_message.visible = 0
     app.display()
 
