@@ -113,7 +113,7 @@ def signin_UI():
     button1.visible = 1
     button2.visible = 1
     button3.update_command(logout)
-    button3.set_text('logout')
+    button3.set_text('Logout')
     button3.visible = 1
 
 
@@ -199,7 +199,7 @@ def practice_game():
 
 
 def show_training_plan():
-
+    button3.visible = 0
     button1.update_command(next)
     button1.set_text("Next")
     button2.visible = 0
