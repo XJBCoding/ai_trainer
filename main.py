@@ -393,10 +393,14 @@ def train_repeater(sensor, count, state, direction):
             current_time = time.time()
             duration = int(current_time - start_time)
             accleration = abs(sensor.acc[-1][1] - sensor.acc[-3][1])
+            if accleration > 10:
+                accleration = 10
             power = 1/4 * current_weight * accleration / 3
             actual_cal = movement_count * current_calorie
+            actual_cal = format(actual_cal, '.2f')
             print(sensor.muscle[-1], sensor.acc[-1][1], state, direction)
             strength = float(sensor.muscle[-1] + sensor.muscle[-2] + sensor.muscle[-3])/muscle_max/3
+            strength = strength * 100
             if strength > 100.00:
                 strength = 100.00
             strength = format(strength, '.2f')
@@ -405,7 +409,7 @@ def train_repeater(sensor, count, state, direction):
             power = format(power, '.2f')
 
             # set text
-            statistic_message.set("\nCalorie consumption: "+str(actual_cal)+"\nAcceleration: "+str(accleration)+" m/s^2 \nStrength: "+str(strength * 100)+"% \nPower: "+str(power)+"W\nDuration: "+str(duration)+"s \n")
+            statistic_message.set("\nCalorie consumption: "+str(actual_cal)+"\nAcceleration: "+str(accleration)+" m/s^2 \nStrength: "+str(strength)+"% \nPower: "+str(power)+"W\nDuration: "+str(duration)+"s \n")
             sensor.save_csv('train_data.csv')
             count = 0
         statistic_message.after(50, train_repeater, args=[sensor, count + 1, state, direction])
