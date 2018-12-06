@@ -128,18 +128,23 @@ def stop_game():
     global stop
     #############TODO: add function here
     stop = 0
-
+    opponent_id_message.visible = 0
 
 def start_boxing_game():
     #########TODO:add function
     x = 1
 
+
 def boxing_repeater(sensor,hp):
     global stop
-    if stop == 1:
+    if stop == 1 and hp>0:
         sensor.read()
         print(sensor.acc[-1][0])
-        speed = int(abs(sensor.acc[-1][0]-300)/10)
+        speed = abs(sensor.acc[-1][0])
+        if speed < 200:
+            speed = 0
+        else:
+            speed = (speed-200)/10
         if speed > 10:
             speed = 10
         print(speed)
@@ -147,7 +152,7 @@ def boxing_repeater(sensor,hp):
         get_life_bar(hp)
         button2.after(200, boxing_repeater, args=[sensor, hp])
     else:
-        stop = 0
+        stop_game()
 
 def start_practice():
     global stop, fig
