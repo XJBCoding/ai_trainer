@@ -71,7 +71,16 @@ def train_init():
     calorie = plan[0]['calorie']
 
 
-
+def welcome():
+    button3.visible = 0
+    button2.visible = 0
+    button1.visible = 0
+    welcome_pic.resize(400, 400)
+    welcome_message.set("Please Login on Your Phone\nto Unlock This Device")
+    welcome_message.show()
+    button1.update_command(start_server)
+    button1.set_text('Syncronize')
+    button1.visible = 1
 
 
 def start_server():
@@ -91,8 +100,10 @@ def start_server():
 
 
 def signin_UI():
+    button1.visible = 0
+    button2.visible = 0
+    button3.visible = 0
     welcome_message.hide()
-    button1.update_command(show_training_plan)
     terminate_message.visible = 0
     welcome_pic.resize(200, 200)
     button1.update_command(show_training_plan)
@@ -101,6 +112,91 @@ def signin_UI():
     button2.set_text("Boxing")
     button1.visible = 1
     button2.visible = 1
+    button3.update_command(logout)
+    button3.set_text('logout')
+    button3.visible = 1
+
+
+def logout():
+    global status
+    status = 0
+    welcome()
+
+
+def boxing():
+    welcome_pic.resize(25,25)
+    welcome_message.hide()
+    button3.visible = 0
+    button2.visible = 0
+    button1.update_command(interactive_game)
+    button1.set_text("Interactive Game")
+    button1.visible = 1
+    button2.update_command(practice_game)
+    button2.set_text("Practice")
+    button2.visible = 1
+    button3.update_command(signin_UI)
+    button3.set_text("Back")
+    button3.visible = 1
+    opponent_id_message.visible = 0
+
+
+def get_opponent_id():
+    ########TODO: add function here
+    opponent_id = ""
+    return opponent_id
+
+
+def stop_game():
+    #############TODO: add function here
+    x = 1
+
+
+def start_boxing_game():
+    #########TODO:add function
+    x = 1
+
+
+def start_practice():
+    #########
+    # health = 85
+    get_life_bar(70)  # max:100
+
+
+def get_life_bar(health):
+    dashConvert = int(maxHealth / 50)
+    currentDashes = int(health / dashConvert)
+    remainingHealth = 50 - currentDashes
+    healthDisplay = ''.join(['-' for i in range(currentDashes)])
+    remainingDisplay = ''.join([' ' for i in range(remainingHealth)])
+    percent = str(int((health / maxHealth) * 100)) + "%"
+    opponent_id_message.set("|" + healthDisplay + remainingDisplay + "|" + "\n" + "         " + percent)
+    opponent_id_message.visible = 1
+
+
+def interactive_game():
+    button1.update_command(start_boxing_game)
+    button1.set_text("Start")
+    button1.visible = 1
+    button2.update_command(stop_game)
+    button2.set_text("Stop")
+    button2.visible = 1
+    button3.update_command(boxing)
+    button3.visible = 1
+    opponent_id_message.set("Your opponent ID: " + get_opponent_id())
+    opponent_id_message.visible = 1
+    start_boxing_game()
+
+
+def practice_game():
+    button1.update_command(start_practice)
+    button1.set_text("Start")
+    button1.visible = 1
+    button2.update_command(stop_game)
+    button2.set_text("Stop")
+    button2.visible = 1
+    button3.update_command(boxing)
+    button3.visible = 1
+
 
 def show_training_plan():
 
@@ -442,6 +538,13 @@ if __name__ == "__main__":
                              text="",
                              color="white", size=10)
     terminate_message.visible = 0
+
+    # updates
+    button3 = PushButton(app, text="Back", command=logout, width=12)
+    button3.visible = 0
+    opponent_id_message = Text(app, text="")
+    opponent_id_message.visible = 0
+
     app.display()
 
 
