@@ -17,7 +17,7 @@ import random
 import string
 from sensor import Sensor
 from controller import PlanController
-from server import run_server
+from server import run_server, inner_signout
 
 
 
@@ -119,7 +119,7 @@ def signin_UI():
 
 def logout():
     global status
-    status = 0
+    status =
     welcome()
 
 

@@ -21,8 +21,10 @@ def signin(id, password):
         else:
             return "The password does not match our record"
             
-def signout():
-	global status
+def inner_signout():
+    global status
+    status = 0
+    return 0
 
 # HTTPRequestHandler class
 class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
