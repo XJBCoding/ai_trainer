@@ -41,29 +41,6 @@ def finish():
     picture.value = 'coupon.png'
 
 
-def boxing():
-    global stop, fig
-    stop = 1
-    picture.value = 'white.png'
-    sensor = Sensor(100)
-    data.after(200, boxing_repeater, args=[sensor, 1000])
-
-
-def boxing_repeater(sensor, hp):
-    global stop
-    data.value = 'hp left: ' + str(hp)
-    if stop == 1 and hp > 0:
-        sensor.read()
-        print(sensor.acc[-1][0])
-        if sensor.acc[-1][0] > 300:
-            hp = hp - (sensor.acc[-1][0] - 300)
-            data.value = 'punch!' + 'hp left: ' + str(hp)
-        data.after(200, boxing_repeater, args=[sensor, hp])
-    else:
-        data.value = 'game finished!'
-        stop = 0
-
-
 def train_init():
     plan = getTodayTraining('kunjian')
     movement_name = plan[0]['name']
@@ -156,21 +133,62 @@ def start_boxing_game():
     #########TODO:add function
     x = 1
 
+def boxing_repeater(sensor, hp):
+    global stop
+    if stop == 1 and hp > 0:
+        sensor.read()
+        print(sensor.acc[-1][0])
+        button2.after(200, boxing_repeater, args=[sensor, hp])
+        x_diff = abs(sensor.acc[-1][0] - sensor.acc[-2][0])
+        y_diff = abs(sensor.acc[-1][1] - sensor.acc[-2][0])
+        accuracy = int((1-y_diff/x_diff) * 100)
+        speed = int(abs(sensor.acc[-1][0]/3 * random.uniform(0.9,1.1)))
+        if speed > 100:
+            speed = 100
+        strength = int(abs(sensor.acc[-1][0]/3 * random.uniform(0.8,1.2)))
+        if strength > 100:
+            strength = 100
+        get_life_bar(strength, speed, accuracy, (strength + speed + accuracy) / 3)
+    else:
+        stop = 0
 
 def start_practice():
+    global stop, fig
     #########
     # health = 85
-    get_life_bar(70)  # max:100
+    stop = 1
+    sensor = Sensor(100)
+    button2.after(200, boxing_repeater, args=[sensor, hp])
+      # max:100
 
 
-def get_life_bar(health):
-    dashConvert = int(maxHealth / 50)
-    currentDashes = int(health / dashConvert)
-    remainingHealth = 50 - currentDashes
-    healthDisplay = ''.join(['-' for i in range(currentDashes)])
-    remainingDisplay = ''.join([' ' for i in range(remainingHealth)])
-    percent = str(int((health / maxHealth) * 100)) + "%"
-    opponent_id_message.set("|" + healthDisplay + remainingDisplay + "|" + "\n" + "         " + percent)
+def get_life_bar(strength, speed, accuracy, overall):
+    dashConvert = int(100 / 50)
+    currentDashes1 = int(strength / dashConvert)
+    currentDashes2 = int(speed / dashConvert)
+    currentDashes3 = int(accuracy / dashConvert)
+    currentDashes4 = int(overall / dashConvert)
+    remainingHealth1 = 50 - currentDashes1
+    remainingHealth2 = 50 - currentDashes2
+    remainingHealth3 = 50 - currentDashes3
+    remainingHealth4 = 50 - currentDashes4
+    healthDisplay1 = ''.join(['-' for i in range(currentDashes1)])
+    remainingDisplay1 = ''.join([' ' for i in range(remainingHealth1)])
+    healthDisplay2 = ''.join(['-' for i in range(currentDashes2)])
+    remainingDisplay2 = ''.join([' ' for i in range(remainingHealth2)])
+    healthDisplay3 = ''.join(['-' for i in range(currentDashes3)])
+    remainingDisplay3 = ''.join([' ' for i in range(remainingHealth3)])
+    healthDisplay4 = ''.join(['-' for i in range(currentDashes4)])
+    remainingDisplay4 = ''.join([' ' for i in range(remainingHealth4)])
+    percent1 = str(int((strength / 100) * 100)) + "%"
+    percent2 = str(int((speed / 100) * 100)) + "%"
+    percent3 = str(int((accuracy / 100) * 100)) + "%"
+    percent4 = str(int((overall / 100) * 100)) + "%"
+    data_temp = "|" + healthDisplay1 + remainingDisplay1 + "|" + "\n" + "         " + percent1
+    data_temp += "|" + healthDisplay2 + remainingDisplay2 + "|" + "\n" + "         " + percent2
+    data_temp += "|" + healthDisplay3 + remainingDisplay3 + "|" + "\n" + "         " + percent3
+    data_temp += "|" + healthDisplay4 + remainingDisplay4 + "|" + "\n" + "         " + percent4
+    opponent_id_message.set(data_temp)
     opponent_id_message.visible = 1
 
 
@@ -397,7 +415,7 @@ def train_repeater(sensor, count, state, direction):
                 accleration = 10
             power = 1/4 * current_weight * accleration / 3
             actual_cal = movement_count * current_calorie
-            actual_cal = format(actual_cal, '.2f')
+            display_cal = format(actual_cal, '.2f')
             print(sensor.muscle[-1], sensor.acc[-1][1], state, direction)
             strength = float(sensor.muscle[-1] + sensor.muscle[-2] + sensor.muscle[-3])/muscle_max/3
             strength = strength * 100
@@ -409,7 +427,7 @@ def train_repeater(sensor, count, state, direction):
             power = format(power, '.2f')
 
             # set text
-            statistic_message.set("\nCalorie consumption: "+str(actual_cal)+"\nAcceleration: "+str(accleration)+" m/s^2 \nStrength: "+str(strength)+"% \nPower: "+str(power)+"W\nDuration: "+str(duration)+"s \n")
+            statistic_message.set("\nCalorie consumption: "+str(display_cal)+"\nAcceleration: "+str(accleration)+" m/s^2 \nStrength: "+str(strength)+"% \nPower: "+str(power)+"W\nDuration: "+str(duration)+"s \n")
             sensor.save_csv('train_data.csv')
             count = 0
         statistic_message.after(50, train_repeater, args=[sensor, count + 1, state, direction])
