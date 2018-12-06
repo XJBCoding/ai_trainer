@@ -538,7 +538,7 @@ if __name__ == "__main__":
     # intermediate
     intermediate_message = Text(app, text="Next Movement:  , Weight: , Goal:\n", color="white", size=13)
     intermediate_message.visible = 0
-    intermediate_pic = Picture(app, image="cartoon.jpg", width=225, height=225)
+    intermediate_pic = Picture(app, image="cartoon.png", width=225, height=225)
     intermediate_pic.visible = 0
 
     # terminate page
