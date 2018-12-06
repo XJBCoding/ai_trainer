@@ -72,6 +72,7 @@ def train_init():
 
 
 def welcome():
+    terminate_message.visible = 0
     button3.visible = 0
     button2.visible = 0
     button1.visible = 0
@@ -393,9 +394,16 @@ def train_repeater(sensor, count, state, direction):
             duration = int(current_time - start_time)
             accleration = abs(sensor.acc[-1][1] - sensor.acc[-3][1])
             power = 1/4 * current_weight * accleration / 3
-            actual_cal = movement_count  * current_calorie
+            actual_cal = movement_count * current_calorie
             print(sensor.muscle[-1], sensor.acc[-1][1], state, direction)
             strength = float(sensor.muscle[-1] + sensor.muscle[-2] + sensor.muscle[-3])/muscle_max/3
+            if strength > 100.00:
+                strength = 100.00
+            strength = format(strength, '.2f')
+            if power > 5.00:
+                power = 5.00
+            power = format(power, '.2f')
+
             # set text
             statistic_message.set("\nCalorie consumption: "+str(actual_cal)+"\nAcceleration: "+str(accleration)+" m/s^2 \nStrength: "+str(strength * 100)+"% \nPower: "+str(power)+"W\nDuration: "+str(duration)+"s \n")
             sensor.save_csv('train_data.csv')
@@ -496,7 +504,7 @@ if __name__ == "__main__":
     movement_num = 0
     start_time = 0
     app = App(title="AI Trainer", layout="auto", bg=(239, 106, 135))
-    welcome_pic = Picture(app, image="welcome.jpg", width=200, height=200)
+    welcome_pic = Picture(app, image="welcome.jpg", width=300, height=300)
     welcome_message = Text(app, text="Please Login on Your Phone\nto Unlock This Device", color="white", size=15)
     button1 = PushButton(app, command=start_server,text="Syncronize", width=15)
     button2 = PushButton(app, command=boxing, text="Boxing", width=15)
@@ -513,7 +521,7 @@ if __name__ == "__main__":
                              text="Peak of red line determine your max strength.\nBlue line determine the range of your movement.",
                              color="white", size=13)
     training_message2.visible = 0
-    calibrate_pic = Picture(app, image="button.jpg", width=200, height=150)
+    calibrate_pic = Picture(app, image="button.jpg", width=300, height=225)
     calibrate_pic.visible = 0
 
     # calibrate
@@ -530,7 +538,7 @@ if __name__ == "__main__":
     # intermediate
     intermediate_message = Text(app, text="Next Movement:  , Weight: , Goal:\n", color="white", size=13)
     intermediate_message.visible = 0
-    intermediate_pic = Picture(app, image="button.jpg", width=200, height=150)
+    intermediate_pic = Picture(app, image="carton.jpg", width=225, height=225)
     intermediate_pic.visible = 0
 
     # terminate page
