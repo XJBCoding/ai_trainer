@@ -93,7 +93,13 @@ def start_server():
 def signin_UI():
     welcome_message.hide()
     button1.update_command(show_training_plan)
-    button1.set_text("Train")
+    terminate_message.visible = 0
+    welcome_pic.resize(200, 200)
+    button1.update_command(show_training_plan)
+    button1.set_text("Training")
+    button2.update_command(boxing)
+    button2.set_text("Boxing")
+    button1.visible = 1
     button2.visible = 1
 
 def show_training_plan():
@@ -191,7 +197,8 @@ def calibrate():
 
 
 def finish_calibrate():
-    global stop
+    global stop,start_time
+    start_time = time.time()
     stop = 0
     calibrate_message.visible = 0
     calibrate_pic.visible = 0
@@ -257,7 +264,7 @@ def train_result():
 def train_repeater(sensor, count, state, direction):
     # state: 0 mid, 1 up, -1 down
     # direction: 1 up, -1 down
-    global y_min, y_max, muscle_max, movement_count, actual_cal, current_target_count
+    global y_min, y_max, muscle_max, movement_count, actual_cal, current_target_count,start_time
     if movement_count == current_target_count:
         skip()
     if stop == 1:
@@ -286,11 +293,15 @@ def train_repeater(sensor, count, state, direction):
                     direction = 1
 
         if count == 20:
-            power = abs(sensor.acc[-2][1] - sensor.acc[-1][1]) * current_weight / 10000
+            current_time = time.time()
+            duration = int(current_time - start_time)
+            accleration = abs(sensor.acc[-1][1] - sensor.acc[-3][1])
+            power = 1/4 * current_weight * accleration / 3
             actual_cal = movement_count  * current_calorie
             print(sensor.muscle[-1], sensor.acc[-1][1], state, direction)
+            strength = float(sensor.muscle[-1] + sensor.muscle[-2] + sensor.muscle[-3])/muscle_max/3
             # set text
-            statistic_message.set("\nCalorie consumption: "+str(actual_cal)+"\nAcceleration: 0 m/s^2 \nStrength: 0% \nPower: "+str(power)+"W\nDuration: 0 mins \n")
+            statistic_message.set("\nCalorie consumption: "+str(actual_cal)+"\nAcceleration: "+str(accleration)+" m/s^2 \nStrength: "+str(strength * 100)+"% \nPower: "+str(power)+"W\nDuration: "+str(duration)+"s \n")
             sensor.save_csv('train_data.csv')
             count = 0
         statistic_message.after(50, train_repeater, args=[sensor, count + 1, state, direction])
@@ -302,7 +313,7 @@ def train():
     global stop,plan_count
     stop = 1
     plan_count += 1
-    statistic_message.set("\nCalorie consumption: 0\nAcceleration: 0 m/s^2\nStrength: 0% \nDuration: 0 mins \n")
+    statistic_message.set("\nCalorie consumption: 0\nAcceleration: 0 m/s^2\nStrength: 0% \nDuration: 0s \n")
     movement_message.set("Current Movement:" + current_movement + " Weight: " + str(current_weight) + " Goal: "+str(current_target_count) + "\n")
     button1.visible = 0
     button2.visible = 0
@@ -372,18 +383,8 @@ def terminate():
     app.after(3000, welcome)
 
 
-def welcome():
-    terminate_message.visible = 0
-    welcome_pic.resize(200, 200)
-    button1.update_command(show_training_plan)
-    button1.set_text("Training")
-    button2.update_command(boxing)
-    button2.set_text("Boxing")
-    button1.visible = 1
-    button2.visible = 1
 
-def check_status():
-    pass
+
 
 if __name__ == "__main__":
     status = 0
@@ -397,6 +398,7 @@ if __name__ == "__main__":
     actual_cal = 0
     movement_count = 0
     movement_num = 0
+    start_time = 0
     app = App(title="AI Trainer", layout="auto", bg=(239, 106, 135))
     welcome_pic = Picture(app, image="welcome.jpg", width=200, height=200)
     welcome_message = Text(app, text="Please Login on Your Phone\nto Unlock This Device", color="white", size=12)
