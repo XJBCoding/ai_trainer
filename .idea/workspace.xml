@@ -50,12 +50,12 @@
     <session id="152201953">
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="1107" />
+          <entry key="py" value="1127" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="Python" value="1107" />
+          <entry key="Python" value="1127" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.open">
@@ -75,11 +75,11 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="336">
-              <caret line="137" column="16" selection-start-line="137" selection-start-column="16" selection-end-line="137" selection-end-column="16" />
+            <state relative-caret-position="531">
+              <caret line="127" column="15" selection-start-line="127" selection-start-column="15" selection-end-line="127" selection-end-column="15" />
               <folding>
                 <element signature="e#155#179#0" expanded="true" />
-                <marker date="1544076139772" expanded="true" signature="3955:3960" ph="..." />
+                <marker date="1544076309289" expanded="true" signature="3974:3979" ph="..." />
               </folding>
             </state>
           </provider>
@@ -138,6 +138,7 @@
       <find>random</find>
       <find>strength</find>
       <find>boxing</find>
+      <find>practice</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -279,11 +280,11 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="336">
-          <caret line="137" column="16" selection-start-line="137" selection-start-column="16" selection-end-line="137" selection-end-column="16" />
+        <state relative-caret-position="531">
+          <caret line="127" column="15" selection-start-line="127" selection-start-column="15" selection-end-line="127" selection-end-column="15" />
           <folding>
             <element signature="e#155#179#0" expanded="true" />
-            <marker date="1544076139772" expanded="true" signature="3955:3960" ph="..." />
+            <marker date="1544076309289" expanded="true" signature="3974:3979" ph="..." />
           </folding>
         </state>
       </provider>

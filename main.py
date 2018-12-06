@@ -125,8 +125,9 @@ def get_opponent_id():
 
 
 def stop_game():
+    global stop
     #############TODO: add function here
-    x = 1
+    stop = 0
 
 
 def start_boxing_game():
