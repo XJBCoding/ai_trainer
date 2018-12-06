@@ -124,6 +124,7 @@ def next():
     button2.set_text("Start Training")
     training_message1.visible = 1
     calibrate_pic.visible = 1
+    calibrate_pic.value = "tutorial.jpeg"
     training_message2.visible = 1
 
 
@@ -138,8 +139,6 @@ def cal_repeater(sensor, count):
         calibrate_pic.after(50, cal_repeater, args=[sensor, count + 1])
         # print('next round')
     else:
-        name = calibrate_result()
-        calibrate_pic.values = name
         print('end')
 
 
@@ -192,7 +191,6 @@ def calibrate():
     button1.set_text("Finish")
     calibrate_message.visible = 1
     calibrate_pic.visible = 1
-
     calibrate_pic.after(50, cal_repeater, args=[sensor, 0])
 
 
@@ -208,6 +206,8 @@ def finish_calibrate():
     '''
     button2.visible = 1
     training_message1.visible = 1
+    name = calibrate_result()
+    calibrate_pic.set(name)
     calibrate_pic.visible = 1
     training_message2.visible = 1
     button1.set_text("Calibrate Again")
