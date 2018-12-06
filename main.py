@@ -134,22 +134,17 @@ def start_boxing_game():
     #########TODO:add function
     x = 1
 
-def boxing_repeater(sensor):
+def boxing_repeater(sensor,hp):
     global stop
     if stop == 1:
         sensor.read()
         print(sensor.acc[-1][0])
-        button2.after(200, boxing_repeater, args=[sensor])
-        x_diff = abs(sensor.acc[-1][0] - sensor.acc[-2][0])
-        y_diff = abs(sensor.acc[-1][1] - sensor.acc[-2][0])
-        accuracy = int((1-y_diff/x_diff) * 100)
-        speed = int(abs(sensor.acc[-1][0]/3 * random.uniform(0.9,1.1)))
-        if speed > 100:
-            speed = 100
-        strength = int(abs(sensor.acc[-1][0]/3 * random.uniform(0.8,1.2)))
-        if strength > 100:
-            strength = 100
-        get_life_bar(strength, speed, accuracy, (strength + speed + accuracy) / 3)
+        button2.after(200, boxing_repeater, args=[sensor,hp])
+        speed = int(abs(sensor.acc[-1][0]-300)/10)
+        if speed > 10:
+            speed = 10
+        hp -= speed
+        get_life_bar(hp)
     else:
         stop = 0
 
@@ -158,38 +153,20 @@ def start_practice():
     #########
     # health = 85
     stop = 1
+    hp = 100
     sensor = Sensor(100)
-    button2.after(200, boxing_repeater, args=[sensor])
+    button2.after(200, boxing_repeater, args=[sensor,hp])
       # max:100
 
 
-def get_life_bar(strength, speed, accuracy, overall):
-    dashConvert = int(100 / 50)
-    currentDashes1 = int(strength / dashConvert)
-    currentDashes2 = int(speed / dashConvert)
-    currentDashes3 = int(accuracy / dashConvert)
-    currentDashes4 = int(overall / dashConvert)
-    remainingHealth1 = 50 - currentDashes1
-    remainingHealth2 = 50 - currentDashes2
-    remainingHealth3 = 50 - currentDashes3
-    remainingHealth4 = 50 - currentDashes4
-    healthDisplay1 = ''.join(['-' for i in range(currentDashes1)])
-    remainingDisplay1 = ''.join([' ' for i in range(remainingHealth1)])
-    healthDisplay2 = ''.join(['-' for i in range(currentDashes2)])
-    remainingDisplay2 = ''.join([' ' for i in range(remainingHealth2)])
-    healthDisplay3 = ''.join(['-' for i in range(currentDashes3)])
-    remainingDisplay3 = ''.join([' ' for i in range(remainingHealth3)])
-    healthDisplay4 = ''.join(['-' for i in range(currentDashes4)])
-    remainingDisplay4 = ''.join([' ' for i in range(remainingHealth4)])
-    percent1 = str(int((strength / 100) * 100)) + "%"
-    percent2 = str(int((speed / 100) * 100)) + "%"
-    percent3 = str(int((accuracy / 100) * 100)) + "%"
-    percent4 = str(int((overall / 100) * 100)) + "%"
-    data_temp = "|" + healthDisplay1 + remainingDisplay1 + "|" + "\n" + "         " + percent1
-    data_temp += "|" + healthDisplay2 + remainingDisplay2 + "|" + "\n" + "         " + percent2
-    data_temp += "|" + healthDisplay3 + remainingDisplay3 + "|" + "\n" + "         " + percent3
-    data_temp += "|" + healthDisplay4 + remainingDisplay4 + "|" + "\n" + "         " + percent4
-    opponent_id_message.set(data_temp)
+def get_life_bar(health):
+    dashConvert = int(100/50)
+    currentDashes = int(health/dashConvert)
+    remainingHealth = 50 - currentDashes
+    healthDisplay = ''.join(['-' for i in range(currentDashes)])
+    remainingDisplay = ''.join([' ' for i in range(remainingHealth)])
+    percent = str(int((health/100)*100)) + "%"
+    opponent_id_message.set("|" + healthDisplay + remainingDisplay + "|" + "\n" + "         " + percent)
     opponent_id_message.visible = 1
 
 
