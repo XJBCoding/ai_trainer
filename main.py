@@ -8,7 +8,7 @@ Created on Sun Nov 25 17:11:09 2018
 # from IMU import IMUupdate,acc_IMUupdate
 from scipy import signal
 import numpy as np
-import time
+import time    
 from guizero import App, Text, PushButton, Picture
 import matplotlib.pyplot as plt
 import pymongo
@@ -524,7 +524,7 @@ if __name__ == "__main__":
     training_message1 = Text(app, text="Please calibrate before training!", color="white", size=13)
     training_message1.visible = 0
     training_message2 = Text(app,
-                             text="Peak of red line determine your max strength.\nBlue line determine the range of your movement.",
+                             text="Peak of blue line determine your max strength.\nOrange line determine the range of your movement.",
                              color="white", size=13)
     training_message2.visible = 0
     calibrate_pic = Picture(app, image="button.jpg", width=300, height=225)
